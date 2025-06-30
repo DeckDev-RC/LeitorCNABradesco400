@@ -544,7 +544,7 @@ Cenário: Aplicar múltiplas substituições usando planilha
 ## Editor Gráfico de Campos
 
 ### Descrição
-**🆕 NOVA FUNCIONALIDADE** - Interface gráfica moderna e intuitiva para edição específica dos campos `NOSSO_NUMERO` e `CODIGO_EMPRESA` em arquivos CNAB, oferecendo uma experiência visual superior ao editor de terminal.
+**🆕 NOVA FUNCIONALIDADE** - Interface gráfica moderna e intuitiva para edição específica dos campos `NOSSO_NUMERO`, `CODIGO_EMPRESA` e `SEU_NUMERO` (parte antes da barra) em arquivos CNAB, oferecendo uma experiência visual superior ao editor de terminal.
 
 ### Como Usar
 

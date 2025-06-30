@@ -11,7 +11,7 @@ Sistema completo para leitura, processamento e análise de arquivos CNAB 400 de 
 
 - 🛡️ **Edição Segura**: Tecnologia revolucionária que preserva 100% da integridade dos arquivos
 - 🎨 **Interface Moderna**: Layout horizontal otimizado para telas widescreen
-- ✏️ **Editor Gráfico**: Edição visual intuitiva de campos NOSSO_NUMERO e CODIGO_EMPRESA
+- ✏️ **Editor Gráfico**: Edição visual intuitiva de campos NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)
 - 📊 **Múltiplos Formatos**: Exportação para CSV, Excel e geração de CNAB
 - ⚡ **Processamento em Lote**: Processa múltiplos arquivos simultaneamente
 - 💰 **Formatação Brasileira**: Valores monetários no padrão nacional (R$ 1.234,56)

@@ -93,7 +93,7 @@ class EstiloBotao(QPushButton):
 
 
 class EditorGraficoDialog(QDialog):
-    """Dialog para edição gráfica dos campos NOSSO_NUMERO e CODIGO_EMPRESA"""
+    """Dialog para edição gráfica dos campos NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)"""
     
     def __init__(self, processador, parent=None):
         super().__init__(parent)
@@ -108,7 +108,7 @@ class EditorGraficoDialog(QDialog):
         self.carregar_dados()
         
     def setup_ui(self):
-        self.setWindowTitle("Editor Gráfico - NOSSO_NUMERO e CODIGO_EMPRESA")
+        self.setWindowTitle("Editor Gráfico - NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO")
         self.setMinimumSize(1400, 600)  # Mais largo e menos alto
         self.setModal(True)
         
@@ -234,7 +234,7 @@ class EditorGraficoDialog(QDialog):
             font-family: 'Segoe UI';
         """)
         
-        subtitle_label = QLabel("Edição dos campos NOSSO_NUMERO e CODIGO_EMPRESA")
+        subtitle_label = QLabel("Edição dos campos NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)")
         subtitle_label.setStyleSheet("""
             color: rgba(255, 255, 255, 0.9);
             font-size: 14px;
@@ -297,6 +297,13 @@ class EditorGraficoDialog(QDialog):
         self.filtro_codigo_empresa.textChanged.connect(self.filtrar_dados)
         self.filtro_codigo_empresa.setStyleSheet(self.filtro_nosso_numero.styleSheet())
         filter_layout.addWidget(self.filtro_codigo_empresa)
+        
+        # Filtro por Seu Número
+        self.filtro_seu_numero = QLineEdit()
+        self.filtro_seu_numero.setPlaceholderText("Seu Número...")
+        self.filtro_seu_numero.textChanged.connect(self.filtrar_dados)
+        self.filtro_seu_numero.setStyleSheet(self.filtro_nosso_numero.styleSheet())
+        filter_layout.addWidget(self.filtro_seu_numero)
         
         # Botão limpar filtros
         btn_limpar = QPushButton("🗑️ Limpar")
@@ -488,6 +495,33 @@ class EditorGraficoDialog(QDialog):
         codigo_section.addWidget(btn_aplicar_codigo)
         
         lote_layout.addLayout(codigo_section)
+        
+        # Separador horizontal
+        separador2 = QFrame()
+        separador2.setFrameShape(QFrame.HLine)
+        separador2.setStyleSheet(f"color: {TEMA_ATUAL['COR_TABELA_HEADER']};")
+        lote_layout.addWidget(separador2)
+        
+        # Seção Seu Número
+        seu_section = QVBoxLayout()
+        seu_section.setSpacing(4)
+        
+        # Label Seu Número
+        seu_label = QLabel("Seu Número (antes da /):")
+        seu_label.setStyleSheet(f"color: {TEMA_ATUAL['COR_TEXTO']}; font-size: 12px; font-weight: bold;")
+        seu_section.addWidget(seu_label)
+        
+        self.novo_seu_numero = QLineEdit()
+        self.novo_seu_numero.setPlaceholderText("Nova parte antes da barra...")
+        self.novo_seu_numero.setStyleSheet(self.novo_nosso_numero.styleSheet())
+        seu_section.addWidget(self.novo_seu_numero)
+        
+        btn_aplicar_seu = QPushButton("Aplicar a Todos")
+        btn_aplicar_seu.clicked.connect(self.aplicar_seu_numero_lote)
+        btn_aplicar_seu.setStyleSheet(btn_aplicar_nosso.styleSheet())
+        seu_section.addWidget(btn_aplicar_seu)
+        
+        lote_layout.addLayout(seu_section)
         layout.addWidget(lote_frame)
         
     def criar_area_importacao_planilha(self, layout):
@@ -517,7 +551,7 @@ class EditorGraficoDialog(QDialog):
         import_layout.addWidget(import_label)
         
         # Descrição compacta
-        desc_label = QLabel("Planilha Excel com colunas 'NOSSO_NUMERO_ATUAL' e 'NOSSO_NUMERO_CORRIGIDO'")
+        desc_label = QLabel("Planilha Excel com colunas para mapeamentos de NOSSO_NUMERO ou SEU_NUMERO")
         desc_label.setStyleSheet(f"""
             color: {TEMA_ATUAL['COR_TEXTO']};
             font-size: 11px;
@@ -526,6 +560,32 @@ class EditorGraficoDialog(QDialog):
         """)
         desc_label.setWordWrap(True)
         import_layout.addWidget(desc_label)
+        
+        # Seletor de tipo de mapeamento
+        tipo_layout = QHBoxLayout()
+        tipo_layout.setSpacing(8)
+        
+        tipo_label = QLabel("Tipo:")
+        tipo_label.setStyleSheet(f"color: {TEMA_ATUAL['COR_TEXTO']}; font-size: 11px; font-weight: bold;")
+        tipo_layout.addWidget(tipo_label)
+        
+        self.tipo_mapeamento = QComboBox()
+        self.tipo_mapeamento.addItems([
+            "NOSSO_NUMERO (colunas: NOSSO_NUMERO_ATUAL, NOSSO_NUMERO_CORRIGIDO)",
+            "SEU_NUMERO (colunas: PARTE_ANTES_BARRA_ATUAL, PARTE_ANTES_BARRA_NOVA)"
+        ])
+        self.tipo_mapeamento.setStyleSheet(f"""
+            QComboBox {{
+                padding: 4px;
+                border: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
+                border-radius: 4px;
+                font-size: 10px;
+            }}
+        """)
+        self.tipo_mapeamento.currentTextChanged.connect(self.atualizar_preview_tipo_mapeamento)
+        tipo_layout.addWidget(self.tipo_mapeamento)
+        
+        import_layout.addLayout(tipo_layout)
         
         # Campo para mostrar arquivo selecionado
         self.planilha_selecionada = QLabel("Nenhuma planilha selecionada")
@@ -722,9 +782,9 @@ class EditorGraficoDialog(QDialog):
             item_codigo.setData(Qt.UserRole, 'codigo_empresa')
             self.tabela_edicao.setItem(i, 2, item_codigo)
             
-            # Seu Número (apenas visualização)
+            # Seu Número (editável - apenas parte antes da barra)
             item_seu = QTableWidgetItem(str(detalhe.get('seu_numero', '')))
-            item_seu.setFlags(item_seu.flags() & ~Qt.ItemIsEditable)
+            item_seu.setData(Qt.UserRole, 'seu_numero')
             self.tabela_edicao.setItem(i, 3, item_seu)
             
             # Valor (apenas visualização)
@@ -751,6 +811,7 @@ class EditorGraficoDialog(QDialog):
         """Filtra os dados baseado nos filtros"""
         filtro_nosso = self.filtro_nosso_numero.text().lower()
         filtro_codigo = self.filtro_codigo_empresa.text().lower()
+        filtro_seu = self.filtro_seu_numero.text().lower()
         
         for i in range(self.tabela_edicao.rowCount()):
             mostrar_linha = True
@@ -765,12 +826,18 @@ class EditorGraficoDialog(QDialog):
                 if item_codigo and filtro_codigo not in item_codigo.text().lower():
                     mostrar_linha = False
             
+            if filtro_seu and mostrar_linha:
+                item_seu = self.tabela_edicao.item(i, 3)
+                if item_seu and filtro_seu not in item_seu.text().lower():
+                    mostrar_linha = False
+            
             self.tabela_edicao.setRowHidden(i, not mostrar_linha)
     
     def limpar_filtros(self):
         """Limpa todos os filtros"""
         self.filtro_nosso_numero.clear()
         self.filtro_codigo_empresa.clear()
+        self.filtro_seu_numero.clear()
         
         # Mostrar todas as linhas
         for i in range(self.tabela_edicao.rowCount()):
@@ -785,7 +852,7 @@ class EditorGraficoDialog(QDialog):
         campo = item.data(Qt.UserRole)
         novo_valor = item.text().strip()
         
-        if campo in ['nosso_numero', 'codigo_empresa']:
+        if campo in ['nosso_numero', 'codigo_empresa', 'seu_numero']:
             # Validar o valor
             if campo == 'nosso_numero' and novo_valor:
                 # Validar nosso número (alfanumérico, até 12 caracteres)
@@ -804,6 +871,45 @@ class EditorGraficoDialog(QDialog):
                     # Restaurar valor anterior
                     item.setText(str(self.dados_editados[linha].get(campo, '')))
                     return
+            
+            elif campo == 'seu_numero':
+                # Para Seu Número, permitir edição apenas da parte antes da barra
+                valor_original = str(self.dados_editados[linha].get(campo, ''))
+                
+                if '/' in valor_original:
+                    # Se tem barra, preservar a parte depois da barra
+                    parte_depois_barra = '/' + valor_original.split('/', 1)[1]
+                    
+                    # Validar que não está tentando editar a parte depois da barra
+                    if '/' in novo_valor:
+                        QMessageBox.warning(self, "Edição Restrita", 
+                            "Você pode editar apenas a parte ANTES da barra (/) no Seu Número.\n"
+                            f"Parte fixa: {parte_depois_barra}")
+                        # Restaurar valor anterior
+                        item.setText(valor_original)
+                        return
+                    
+                    # Validar tamanho da parte antes da barra
+                    if len(novo_valor) > 10:
+                        QMessageBox.warning(self, "Valor Inválido", 
+                            "A parte antes da barra no Seu Número deve ter no máximo 10 caracteres.")
+                        # Restaurar valor anterior
+                        item.setText(valor_original)
+                        return
+                    
+                    # Construir novo valor completo
+                    novo_valor_completo = novo_valor + parte_depois_barra
+                    item.setText(novo_valor_completo)
+                    novo_valor = novo_valor_completo
+                    
+                else:
+                    # Se não tem barra, validar normalmente
+                    if len(novo_valor) > 10:
+                        QMessageBox.warning(self, "Valor Inválido", 
+                            "Seu Número deve ter no máximo 10 caracteres.")
+                        # Restaurar valor anterior
+                        item.setText(valor_original)
+                        return
             
             # Aplicar alteração
             self.dados_editados[linha][campo] = novo_valor
@@ -929,6 +1035,79 @@ class EditorGraficoDialog(QDialog):
         
         QMessageBox.information(self, "Alteração Aplicada", 
             f"Código da Empresa alterado em {alterados} registro(s).")
+    
+    def aplicar_seu_numero_lote(self):
+        """Aplica nova parte antes da barra do Seu Número a todos os registros visíveis"""
+        novo_valor = self.novo_seu_numero.text().strip()
+        
+        if not novo_valor:
+            QMessageBox.warning(self, "Valor Inválido", "Digite um valor para a parte antes da barra do Seu Número.")
+            return
+        
+        # Validar
+        if len(novo_valor) > 10:
+            QMessageBox.warning(self, "Valor Inválido", 
+                "A parte antes da barra no Seu Número deve ter no máximo 10 caracteres.")
+            return
+        
+        if '/' in novo_valor:
+            QMessageBox.warning(self, "Valor Inválido", 
+                "Digite apenas a parte ANTES da barra. A parte depois será preservada automaticamente.")
+            return
+        
+        # Confirmar ação
+        registros_visiveis = sum(1 for i in range(self.tabela_edicao.rowCount()) 
+                                if not self.tabela_edicao.isRowHidden(i))
+        
+        resposta = QMessageBox.question(self, "Confirmar Alteração",
+            f"Deseja aplicar '{novo_valor}' como parte antes da barra do Seu Número em {registros_visiveis} registro(s) visível(eis)?\n\n"
+            "A parte após a barra (/) será preservada em cada registro.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        
+        if resposta != QMessageBox.Yes:
+            return
+        
+        # Aplicar alteração
+        alterados = 0
+        for i in range(self.tabela_edicao.rowCount()):
+            if not self.tabela_edicao.isRowHidden(i):
+                # Obter valor original
+                valor_original = str(self.dados_editados[i].get('seu_numero', ''))
+                
+                # Construir novo valor
+                if '/' in valor_original:
+                    # Preservar parte depois da barra
+                    parte_depois_barra = '/' + valor_original.split('/', 1)[1]
+                    novo_valor_completo = novo_valor + parte_depois_barra
+                else:
+                    # Se não tem barra, usar apenas o novo valor
+                    novo_valor_completo = novo_valor
+                
+                # Atualizar dados
+                self.dados_editados[i]['seu_numero'] = novo_valor_completo
+                self.dados_editados[i]['_alterado'] = True
+                
+                # Atualizar tabela
+                item = self.tabela_edicao.item(i, 3)
+                if item:
+                    item.setText(novo_valor_completo)
+                    item.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
+                
+                # Destacar linha
+                for col in range(self.tabela_edicao.columnCount()):
+                    item_col = self.tabela_edicao.item(i, col)
+                    if item_col:
+                        item_col.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
+                
+                alterados += 1
+        
+        self.alteracoes_realizadas = True
+        self.btn_salvar.setEnabled(True)
+        self.atualizar_info_alteracoes()
+        self.novo_seu_numero.clear()
+        
+        QMessageBox.information(self, "Alteração Aplicada", 
+            f"Seu Número (parte antes da barra) alterado em {alterados} registro(s).")
     
     def atualizar_info_alteracoes(self):
         """Atualiza as informações sobre alterações"""
@@ -1107,8 +1286,17 @@ class EditorGraficoDialog(QDialog):
             import pandas as pd
             df_mapeamentos = pd.read_excel(arquivo_excel)
             
+            # Determinar tipo de mapeamento baseado no combo
+            tipo_selecionado = self.tipo_mapeamento.currentText()
+            
+            if "NOSSO_NUMERO" in tipo_selecionado:
+                colunas_necessarias = ['NOSSO_NUMERO_ATUAL', 'NOSSO_NUMERO_CORRIGIDO']
+                self.tipo_mapeamento_atual = 'nosso_numero'
+            else:
+                colunas_necessarias = ['PARTE_ANTES_BARRA_ATUAL', 'PARTE_ANTES_BARRA_NOVA']
+                self.tipo_mapeamento_atual = 'seu_numero'
+            
             # Verificar colunas obrigatórias
-            colunas_necessarias = ['NOSSO_NUMERO_ATUAL', 'NOSSO_NUMERO_CORRIGIDO']
             colunas_faltando = [col for col in colunas_necessarias if col not in df_mapeamentos.columns]
             
             if colunas_faltando:
@@ -1125,9 +1313,13 @@ class EditorGraficoDialog(QDialog):
                     "A planilha não contém dados válidos nas colunas necessárias.")
                 return
             
-            # Converter para string e remover espaços
-            df_mapeamentos['NOSSO_NUMERO_ATUAL'] = df_mapeamentos['NOSSO_NUMERO_ATUAL'].astype(str).str.strip()
-            df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'] = df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'].astype(str).str.strip()
+            # Converter para string e remover espaços baseado no tipo
+            if self.tipo_mapeamento_atual == 'nosso_numero':
+                df_mapeamentos['NOSSO_NUMERO_ATUAL'] = df_mapeamentos['NOSSO_NUMERO_ATUAL'].astype(str).str.strip()
+                df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'] = df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'].astype(str).str.strip()
+            else:
+                df_mapeamentos['PARTE_ANTES_BARRA_ATUAL'] = df_mapeamentos['PARTE_ANTES_BARRA_ATUAL'].astype(str).str.strip()
+                df_mapeamentos['PARTE_ANTES_BARRA_NOVA'] = df_mapeamentos['PARTE_ANTES_BARRA_NOVA'].astype(str).str.strip()
             
             # Armazenar dados
             self.df_mapeamentos = df_mapeamentos
@@ -1154,18 +1346,38 @@ class EditorGraficoDialog(QDialog):
         
         df = self.df_mapeamentos
         
-        # Contar quantos registros serão afetados
-        nossos_numeros_atuais = set(df['NOSSO_NUMERO_ATUAL'].astype(str))
-        registros_encontrados = 0
-        
-        for detalhe in self.dados_editados:
-            nosso_numero_cnab = str(detalhe.get('nosso_numero', '')).strip()
-            if nosso_numero_cnab in nossos_numeros_atuais:
-                registros_encontrados += 1
+        # Contar quantos registros serão afetados baseado no tipo
+        if self.tipo_mapeamento_atual == 'nosso_numero':
+            valores_atuais = set(df['NOSSO_NUMERO_ATUAL'].astype(str))
+            campo_cnab = 'nosso_numero'
+            nome_campo = 'Nosso Número'
+            
+            registros_encontrados = 0
+            for detalhe in self.dados_editados:
+                valor_cnab = str(detalhe.get(campo_cnab, '')).strip()
+                if valor_cnab in valores_atuais:
+                    registros_encontrados += 1
+        else:
+            # Para SEU_NUMERO, comparar apenas a parte antes da barra
+            valores_atuais = set(df['PARTE_ANTES_BARRA_ATUAL'].astype(str))
+            campo_cnab = 'seu_numero'
+            nome_campo = 'Seu Número'
+            
+            registros_encontrados = 0
+            for detalhe in self.dados_editados:
+                valor_cnab = str(detalhe.get(campo_cnab, '')).strip()
+                # Extrair apenas a parte antes da barra para comparação
+                if '/' in valor_cnab:
+                    parte_antes_barra = valor_cnab.split('/')[0]
+                else:
+                    parte_antes_barra = valor_cnab
+                
+                if parte_antes_barra in valores_atuais:
+                    registros_encontrados += 1
         
         # Gerar preview text
         preview_lines = []
-        preview_lines.append(f"📊 PREVIEW DOS MAPEAMENTOS:")
+        preview_lines.append(f"📊 PREVIEW DOS MAPEAMENTOS - {nome_campo.upper()}:")
         preview_lines.append(f"📄 Total de mapeamentos na planilha: {len(df)}")
         preview_lines.append(f"🎯 Registros CNAB que serão afetados: {registros_encontrados}")
         preview_lines.append("")
@@ -1173,12 +1385,24 @@ class EditorGraficoDialog(QDialog):
         
         # Mostrar primeiros 5 mapeamentos
         for i, (_, row) in enumerate(df.head(5).iterrows()):
-            atual = row['NOSSO_NUMERO_ATUAL']
-            corrigido = row['NOSSO_NUMERO_CORRIGIDO']
-            preview_lines.append(f"  {atual} → {corrigido}")
+            if self.tipo_mapeamento_atual == 'nosso_numero':
+                atual = row['NOSSO_NUMERO_ATUAL']
+                corrigido = row['NOSSO_NUMERO_CORRIGIDO']
+                preview_lines.append(f"  {atual} → {corrigido}")
+            else:
+                atual = row['PARTE_ANTES_BARRA_ATUAL']
+                novo = row['PARTE_ANTES_BARRA_NOVA']
+                
+                # Para Seu Número, mostrar como ficará com a barra preservada
+                preview_lines.append(f"  {atual}/... → {novo}/... (apenas parte antes da barra)")
+                continue
         
         if len(df) > 5:
             preview_lines.append(f"  ... e mais {len(df) - 5} mapeamentos")
+        
+        if self.tipo_mapeamento_atual == 'seu_numero':
+            preview_lines.append("")
+            preview_lines.append("⚠️ Para SEU_NUMERO: apenas a parte ANTES da barra será alterada")
         
         preview_text = "\n".join(preview_lines)
         self.preview_mapeamentos.setText(preview_text)
@@ -1192,55 +1416,94 @@ class EditorGraficoDialog(QDialog):
         
         # Confirmar operação
         df = self.df_mapeamentos
+        tipo_campo = "Nosso Número" if self.tipo_mapeamento_atual == 'nosso_numero' else "Seu Número"
+        
         resposta = QMessageBox.question(self, "Confirmar Mapeamentos",
-            f"Deseja aplicar {len(df)} mapeamento(s) da planilha?\n\n"
-            "Esta operação irá substituir os nossos números conforme a planilha.",
+            f"Deseja aplicar {len(df)} mapeamento(s) da planilha para {tipo_campo}?\n\n"
+            f"Esta operação irá substituir os valores conforme a planilha.",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if resposta != QMessageBox.Yes:
             return
         
         try:
-            # Criar dicionário de mapeamentos
+            # Criar dicionário de mapeamentos baseado no tipo
             mapeamentos = {}
             for _, row in df.iterrows():
-                atual = str(row['NOSSO_NUMERO_ATUAL']).strip()
-                corrigido = str(row['NOSSO_NUMERO_CORRIGIDO']).strip()
-                
-                # Validar nosso número corrigido
-                if len(corrigido) > 12 or not corrigido.replace(' ', '').isalnum():
-                    QMessageBox.warning(self, "Valor Inválido", 
-                        f"Nosso Número corrigido inválido: '{corrigido}'\n"
-                        "Deve conter apenas letras e números e ter no máximo 12 caracteres.")
-                    return
-                
-                mapeamentos[atual] = corrigido
+                if self.tipo_mapeamento_atual == 'nosso_numero':
+                    atual = str(row['NOSSO_NUMERO_ATUAL']).strip()
+                    corrigido = str(row['NOSSO_NUMERO_CORRIGIDO']).strip()
+                    
+                    # Validar nosso número corrigido
+                    if len(corrigido) > 12 or not corrigido.replace(' ', '').isalnum():
+                        QMessageBox.warning(self, "Valor Inválido", 
+                            f"Nosso Número corrigido inválido: '{corrigido}'\n"
+                            "Deve conter apenas letras e números e ter no máximo 12 caracteres.")
+                        return
+                    
+                    mapeamentos[atual] = corrigido
+                else:
+                    # Para SEU_NUMERO, usar apenas as partes antes da barra
+                    parte_atual = str(row['PARTE_ANTES_BARRA_ATUAL']).strip()
+                    parte_nova = str(row['PARTE_ANTES_BARRA_NOVA']).strip()
+                    
+                    # Validar parte nova (aceita alfanumérico como 49635C)
+                    if len(parte_nova) > 10 or not parte_nova.replace(' ', '').isalnum():
+                        QMessageBox.warning(self, "Valor Inválido", 
+                            f"Parte antes da barra inválida: '{parte_nova}'\n"
+                            "Deve conter apenas letras e números e ter no máximo 10 caracteres.\n"
+                            "Exemplos válidos: 49635, 49635C, ABC123")
+                        return
+                    
+                    mapeamentos[parte_atual] = parte_nova
             
             # Aplicar mapeamentos
             alterados = 0
             for i, detalhe in enumerate(self.dados_editados):
-                nosso_numero_atual = str(detalhe.get('nosso_numero', '')).strip()
+                if self.tipo_mapeamento_atual == 'nosso_numero':
+                    valor_atual = str(detalhe.get('nosso_numero', '')).strip()
+                    coluna_tabela = 1
+                    
+                    if valor_atual in mapeamentos:
+                        novo_valor = mapeamentos[valor_atual]
+                    else:
+                        continue  # Não há mapeamento para este registro
+                else:
+                    # Para SEU_NUMERO, extrair parte antes da barra para comparação
+                    valor_seu_numero = str(detalhe.get('seu_numero', '')).strip()
+                    coluna_tabela = 3
+                    
+                    if '/' in valor_seu_numero:
+                        parte_antes_atual = valor_seu_numero.split('/')[0]
+                        parte_depois_barra = '/' + valor_seu_numero.split('/', 1)[1]
+                    else:
+                        parte_antes_atual = valor_seu_numero
+                        parte_depois_barra = ''
+                    
+                    if parte_antes_atual in mapeamentos:
+                        parte_nova = mapeamentos[parte_antes_atual]
+                        novo_valor = parte_nova + parte_depois_barra
+                    else:
+                        continue  # Não há mapeamento para este registro
                 
-                if nosso_numero_atual in mapeamentos:
-                    novo_nosso_numero = mapeamentos[nosso_numero_atual]
-                    
-                    # Atualizar dados
-                    self.dados_editados[i]['nosso_numero'] = novo_nosso_numero
-                    self.dados_editados[i]['_alterado'] = True
-                    
-                    # Atualizar tabela
-                    item = self.tabela_edicao.item(i, 1)
-                    if item:
-                        item.setText(novo_nosso_numero)
-                        item.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
-                    
-                    # Destacar linha
-                    for col in range(self.tabela_edicao.columnCount()):
-                        item_col = self.tabela_edicao.item(i, col)
-                        if item_col:
-                            item_col.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
-                    
-                    alterados += 1
+                # Atualizar dados
+                campo = 'nosso_numero' if self.tipo_mapeamento_atual == 'nosso_numero' else 'seu_numero'
+                self.dados_editados[i][campo] = novo_valor
+                self.dados_editados[i]['_alterado'] = True
+                
+                # Atualizar tabela
+                item = self.tabela_edicao.item(i, coluna_tabela)
+                if item:
+                    item.setText(novo_valor)
+                    item.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
+                
+                # Destacar linha
+                for col in range(self.tabela_edicao.columnCount()):
+                    item_col = self.tabela_edicao.item(i, col)
+                    if item_col:
+                        item_col.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
+                
+                alterados += 1
             
             # Atualizar interface
             self.alteracoes_realizadas = True
@@ -1249,7 +1512,7 @@ class EditorGraficoDialog(QDialog):
             
             # Mostrar resultado
             QMessageBox.information(self, "Mapeamentos Aplicados", 
-                f"✅ Mapeamentos aplicados com sucesso!\n\n"
+                f"✅ Mapeamentos de {tipo_campo} aplicados com sucesso!\n\n"
                 f"📊 {alterados} registro(s) foram alterados\n"
                 f"📄 {len(df)} mapeamento(s) processados\n"
                 f"🎯 Taxa de aplicação: {(alterados/len(df)*100):.1f}%")
@@ -1257,6 +1520,17 @@ class EditorGraficoDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Erro", 
                 f"Erro ao aplicar mapeamentos:\n{str(e)}")
+    
+    def atualizar_preview_tipo_mapeamento(self):
+        """Atualiza o preview quando o tipo de mapeamento é alterado"""
+        # Limpar planilha selecionada se houver
+        if hasattr(self, 'df_mapeamentos'):
+            delattr(self, 'df_mapeamentos')
+        
+        # Resetar interface
+        self.planilha_selecionada.setText("Nenhuma planilha selecionada")
+        self.preview_mapeamentos.setText("Preview aparecerá após selecionar planilha")
+        self.btn_aplicar_mapeamentos.setEnabled(False)
 
 
 class CNABBradescoGUI(QMainWindow):
@@ -2429,7 +2703,7 @@ class CNABBradescoGUI(QMainWindow):
                 f"Erro ao iniciar editor interativo: {str(e)}")
 
     def editor_grafico(self):
-        """Abre o editor gráfico para NOSSO_NUMERO e CODIGO_EMPRESA"""
+        """Abre o editor gráfico para NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO"""
         if not hasattr(self, 'processador') or not self.processador or not hasattr(self.processador, 'detalhes') or not self.processador.detalhes:
             QMessageBox.warning(self, "Aviso", 
                 "Primeiro carregue um arquivo CNAB para poder editá-lo.")

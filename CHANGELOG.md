@@ -5,6 +5,34 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [1.2.2] - 2024-12-19
+
+### Melhorado
+- **🔤 Validação Alfanumérica**: Sistema agora aceita valores como "49635C" (número + letra)
+- **📊 Exemplos Práticos**: Planilha de exemplo focada em casos reais de uso
+- **🎯 Casos Específicos**: Documentação para acréscimo de letras (49635 → 49635C)
+- **🔧 Mapeamento Robusto**: Correção na aplicação de mapeamentos da planilha
+- **✅ Suporte Completo**: Aceita qualquer combinação alfanumérica (ABC123, 12345Z, etc.)
+
+### Adicionado
+- **📝 Exemplos de Transformação**: Casos específicos como 49635 → 49635C
+- **🔤 Documentação Alfanumérica**: Guia para valores número+letra
+- **✨ Casos de Uso Reais**: Exemplos baseados em necessidades práticas
+
+## [1.2.1] - 2024-12-19
+
+### Adicionado
+- **✏️ Editor Gráfico**: Adicionada edição do campo SEU_NUMERO (parte antes da barra)
+- **🔍 Filtros Avançados**: Filtro de busca por Seu Número no editor gráfico
+- **🔧 Edição em Lote**: Aplicação em massa para parte antes da barra do Seu Número
+- **✅ Validação Inteligente**: Preservação automática da parte após a barra (/)
+- **📊 Mapeamento SEU_NUMERO**: Importação via planilha com colunas simplificadas
+- **🔤 Suporte Alfanumérico**: Aceita números + letras (ex: 49635C, ABC123)
+
+### Alterado
+- **📋 Interface do Editor**: Título e descrições atualizados para incluir SEU_NUMERO
+- **🎯 Funcionalidade Expandida**: Editor gráfico agora suporta 3 campos editáveis
+
 ## [1.2.0] - 2024-12-19
 
 ### Adicionado

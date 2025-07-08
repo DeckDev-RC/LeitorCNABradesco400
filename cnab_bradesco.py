@@ -1414,6 +1414,17 @@ class CNABBradesco:
                 novo_codigo_empresa = novo_codigo_empresa.ljust(17)[:17]
                 linha_editada = linha_editada[:20] + novo_codigo_empresa + linha_editada[37:]
         
+        # Editar SEU_NUMERO (posições 116-126, 10 caracteres)
+        if 'seu_numero' in detalhe and detalhe.get('_alterado', False):
+            novo_seu_numero = str(detalhe['seu_numero']).strip()
+            # Para SEU_NUMERO, remover a barra e dígitos à direita se existirem
+            if '/' in novo_seu_numero:
+                novo_seu_numero = novo_seu_numero.split('/')[0]
+            
+            # Ajustar para 10 caracteres (preencher com espaços à direita ou truncar)
+            novo_seu_numero = novo_seu_numero.ljust(10)[:10]
+            linha_editada = linha_editada[:116] + novo_seu_numero + linha_editada[126:]
+        
         # Restaurar quebra de linha original
         return linha_editada + '\n'
 

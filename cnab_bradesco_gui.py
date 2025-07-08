@@ -507,12 +507,12 @@ class EditorGraficoDialog(QDialog):
         seu_section.setSpacing(4)
         
         # Label Seu Número
-        seu_label = QLabel("Seu Número (antes da /):")
+        seu_label = QLabel("Seu Número (remove barra e dígitos):")
         seu_label.setStyleSheet(f"color: {TEMA_ATUAL['COR_TEXTO']}; font-size: 12px; font-weight: bold;")
         seu_section.addWidget(seu_label)
         
         self.novo_seu_numero = QLineEdit()
-        self.novo_seu_numero.setPlaceholderText("Nova parte antes da barra...")
+        self.novo_seu_numero.setPlaceholderText("Novo valor (remove barra/dígitos)...")
         self.novo_seu_numero.setStyleSheet(self.novo_nosso_numero.styleSheet())
         seu_section.addWidget(self.novo_seu_numero)
         
@@ -873,43 +873,23 @@ class EditorGraficoDialog(QDialog):
                     return
             
             elif campo == 'seu_numero':
-                # Para Seu Número, permitir edição apenas da parte antes da barra
-                valor_original = str(self.dados_editados[linha].get(campo, ''))
+                # Para Seu Número, usar apenas o novo valor (sem barra nem dígitos)
+                if '/' in novo_valor:
+                    QMessageBox.warning(self, "Edição Restrita", 
+                        "Digite apenas o novo valor. A barra (/) e dígitos à direita serão removidos automaticamente.")
+                    # Restaurar valor anterior
+                    valor_original = str(self.dados_editados[linha].get(campo, ''))
+                    item.setText(valor_original)
+                    return
                 
-                if '/' in valor_original:
-                    # Se tem barra, preservar a parte depois da barra
-                    parte_depois_barra = '/' + valor_original.split('/', 1)[1]
-                    
-                    # Validar que não está tentando editar a parte depois da barra
-                    if '/' in novo_valor:
-                        QMessageBox.warning(self, "Edição Restrita", 
-                            "Você pode editar apenas a parte ANTES da barra (/) no Seu Número.\n"
-                            f"Parte fixa: {parte_depois_barra}")
-                        # Restaurar valor anterior
-                        item.setText(valor_original)
-                        return
-                    
-                    # Validar tamanho da parte antes da barra
-                    if len(novo_valor) > 10:
-                        QMessageBox.warning(self, "Valor Inválido", 
-                            "A parte antes da barra no Seu Número deve ter no máximo 10 caracteres.")
-                        # Restaurar valor anterior
-                        item.setText(valor_original)
-                        return
-                    
-                    # Construir novo valor completo
-                    novo_valor_completo = novo_valor + parte_depois_barra
-                    item.setText(novo_valor_completo)
-                    novo_valor = novo_valor_completo
-                    
-                else:
-                    # Se não tem barra, validar normalmente
-                    if len(novo_valor) > 10:
-                        QMessageBox.warning(self, "Valor Inválido", 
-                            "Seu Número deve ter no máximo 10 caracteres.")
-                        # Restaurar valor anterior
-                        item.setText(valor_original)
-                        return
+                # Validar tamanho
+                if len(novo_valor) > 10:
+                    QMessageBox.warning(self, "Valor Inválido", 
+                        "O Seu Número deve ter no máximo 10 caracteres.")
+                    # Restaurar valor anterior
+                    valor_original = str(self.dados_editados[linha].get(campo, ''))
+                    item.setText(valor_original)
+                    return
             
             # Aplicar alteração
             self.dados_editados[linha][campo] = novo_valor
@@ -1037,22 +1017,22 @@ class EditorGraficoDialog(QDialog):
             f"Código da Empresa alterado em {alterados} registro(s).")
     
     def aplicar_seu_numero_lote(self):
-        """Aplica nova parte antes da barra do Seu Número a todos os registros visíveis"""
+        """Aplica novo Seu Número removendo completamente a barra e dígitos à direita"""
         novo_valor = self.novo_seu_numero.text().strip()
         
         if not novo_valor:
-            QMessageBox.warning(self, "Valor Inválido", "Digite um valor para a parte antes da barra do Seu Número.")
+            QMessageBox.warning(self, "Valor Inválido", "Digite um valor para o Seu Número.")
             return
         
         # Validar
         if len(novo_valor) > 10:
             QMessageBox.warning(self, "Valor Inválido", 
-                "A parte antes da barra no Seu Número deve ter no máximo 10 caracteres.")
+                "O Seu Número deve ter no máximo 10 caracteres.")
             return
         
         if '/' in novo_valor:
             QMessageBox.warning(self, "Valor Inválido", 
-                "Digite apenas a parte ANTES da barra. A parte depois será preservada automaticamente.")
+                "Digite apenas o novo valor. A barra e dígitos à direita serão removidos completamente.")
             return
         
         # Confirmar ação
@@ -1060,8 +1040,9 @@ class EditorGraficoDialog(QDialog):
                                 if not self.tabela_edicao.isRowHidden(i))
         
         resposta = QMessageBox.question(self, "Confirmar Alteração",
-            f"Deseja aplicar '{novo_valor}' como parte antes da barra do Seu Número em {registros_visiveis} registro(s) visível(eis)?\n\n"
-            "A parte após a barra (/) será preservada em cada registro.",
+            f"Deseja aplicar '{novo_valor}' como Seu Número em {registros_visiveis} registro(s) visível(eis)?\n\n"
+            "⚠️ ATENÇÃO: A barra (/) e os 3 dígitos à direita serão REMOVIDOS COMPLETAMENTE.\n"
+            "O arquivo final conterá apenas o novo valor digitado.",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if resposta != QMessageBox.Yes:
@@ -1071,17 +1052,8 @@ class EditorGraficoDialog(QDialog):
         alterados = 0
         for i in range(self.tabela_edicao.rowCount()):
             if not self.tabela_edicao.isRowHidden(i):
-                # Obter valor original
-                valor_original = str(self.dados_editados[i].get('seu_numero', ''))
-                
-                # Construir novo valor
-                if '/' in valor_original:
-                    # Preservar parte depois da barra
-                    parte_depois_barra = '/' + valor_original.split('/', 1)[1]
-                    novo_valor_completo = novo_valor + parte_depois_barra
-                else:
-                    # Se não tem barra, usar apenas o novo valor
-                    novo_valor_completo = novo_valor
+                # Usar apenas o novo valor (sem barra nem dígitos à direita)
+                novo_valor_completo = novo_valor
                 
                 # Atualizar dados
                 self.dados_editados[i]['seu_numero'] = novo_valor_completo
@@ -1107,7 +1079,7 @@ class EditorGraficoDialog(QDialog):
         self.novo_seu_numero.clear()
         
         QMessageBox.information(self, "Alteração Aplicada", 
-            f"Seu Número (parte antes da barra) alterado em {alterados} registro(s).")
+            f"Seu Número alterado em {alterados} registro(s). Barra e dígitos à direita removidos.")
     
     def atualizar_info_alteracoes(self):
         """Atualiza as informações sobre alterações"""
@@ -1393,8 +1365,8 @@ class EditorGraficoDialog(QDialog):
                 atual = row['PARTE_ANTES_BARRA_ATUAL']
                 novo = row['PARTE_ANTES_BARRA_NOVA']
                 
-                # Para Seu Número, mostrar como ficará com a barra preservada
-                preview_lines.append(f"  {atual}/... → {novo}/... (apenas parte antes da barra)")
+                # Para Seu Número, mostrar que a barra será removida
+                preview_lines.append(f"  {atual}/... → {novo} (barra e dígitos removidos)")
                 continue
         
         if len(df) > 5:
@@ -1402,7 +1374,7 @@ class EditorGraficoDialog(QDialog):
         
         if self.tipo_mapeamento_atual == 'seu_numero':
             preview_lines.append("")
-            preview_lines.append("⚠️ Para SEU_NUMERO: apenas a parte ANTES da barra será alterada")
+            preview_lines.append("⚠️ Para SEU_NUMERO: a barra (/) e dígitos à direita serão REMOVIDOS completamente")
         
         preview_text = "\n".join(preview_lines)
         self.preview_mapeamentos.setText(preview_text)
@@ -1482,7 +1454,8 @@ class EditorGraficoDialog(QDialog):
                     
                     if parte_antes_atual in mapeamentos:
                         parte_nova = mapeamentos[parte_antes_atual]
-                        novo_valor = parte_nova + parte_depois_barra
+                        # Usar apenas a parte nova (sem barra nem dígitos à direita)
+                        novo_valor = parte_nova
                     else:
                         continue  # Não há mapeamento para este registro
                 

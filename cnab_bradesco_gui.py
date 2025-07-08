@@ -572,7 +572,7 @@ class EditorGraficoDialog(QDialog):
         self.tipo_mapeamento = QComboBox()
         self.tipo_mapeamento.addItems([
             "NOSSO_NUMERO (colunas: NOSSO_NUMERO_ATUAL, NOSSO_NUMERO_CORRIGIDO)",
-            "SEU_NUMERO (colunas: PARTE_ANTES_BARRA_ATUAL, PARTE_ANTES_BARRA_NOVA)"
+            "SEU_NUMERO (colunas: SEU_NUMERO_COMPLETO_ATUAL, SEU_NUMERO_NOVO)"
         ])
         self.tipo_mapeamento.setStyleSheet(f"""
             QComboBox {{
@@ -782,8 +782,14 @@ class EditorGraficoDialog(QDialog):
             item_codigo.setData(Qt.UserRole, 'codigo_empresa')
             self.tabela_edicao.setItem(i, 2, item_codigo)
             
-            # Seu Número (editável - apenas parte antes da barra)
-            item_seu = QTableWidgetItem(str(detalhe.get('seu_numero', '')))
+            # Seu Número (editável - mostrar apenas parte antes da barra)
+            seu_numero_completo = str(detalhe.get('seu_numero', ''))
+            # Se tem barra, mostrar apenas a parte antes da barra
+            if '/' in seu_numero_completo:
+                seu_numero_exibir = seu_numero_completo.split('/')[0]
+            else:
+                seu_numero_exibir = seu_numero_completo
+            item_seu = QTableWidgetItem(seu_numero_exibir)
             item_seu.setData(Qt.UserRole, 'seu_numero')
             self.tabela_edicao.setItem(i, 3, item_seu)
             
@@ -873,14 +879,11 @@ class EditorGraficoDialog(QDialog):
                     return
             
             elif campo == 'seu_numero':
-                # Para Seu Número, usar apenas o novo valor (sem barra nem dígitos)
+                # Para Seu Número, aceitar qualquer valor e remover barra automaticamente
                 if '/' in novo_valor:
-                    QMessageBox.warning(self, "Edição Restrita", 
-                        "Digite apenas o novo valor. A barra (/) e dígitos à direita serão removidos automaticamente.")
-                    # Restaurar valor anterior
-                    valor_original = str(self.dados_editados[linha].get(campo, ''))
-                    item.setText(valor_original)
-                    return
+                    # Remover automaticamente a barra e tudo depois dela
+                    novo_valor = novo_valor.split('/')[0]
+                    item.setText(novo_valor)
                 
                 # Validar tamanho
                 if len(novo_valor) > 10:
@@ -888,6 +891,9 @@ class EditorGraficoDialog(QDialog):
                         "O Seu Número deve ter no máximo 10 caracteres.")
                     # Restaurar valor anterior
                     valor_original = str(self.dados_editados[linha].get(campo, ''))
+                    # Se valor original tem barra, usar só a parte antes da barra
+                    if '/' in valor_original:
+                        valor_original = valor_original.split('/')[0]
                     item.setText(valor_original)
                     return
             
@@ -1265,7 +1271,7 @@ class EditorGraficoDialog(QDialog):
                 colunas_necessarias = ['NOSSO_NUMERO_ATUAL', 'NOSSO_NUMERO_CORRIGIDO']
                 self.tipo_mapeamento_atual = 'nosso_numero'
             else:
-                colunas_necessarias = ['PARTE_ANTES_BARRA_ATUAL', 'PARTE_ANTES_BARRA_NOVA']
+                colunas_necessarias = ['SEU_NUMERO_COMPLETO_ATUAL', 'SEU_NUMERO_NOVO']
                 self.tipo_mapeamento_atual = 'seu_numero'
             
             # Verificar colunas obrigatórias
@@ -1290,8 +1296,8 @@ class EditorGraficoDialog(QDialog):
                 df_mapeamentos['NOSSO_NUMERO_ATUAL'] = df_mapeamentos['NOSSO_NUMERO_ATUAL'].astype(str).str.strip()
                 df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'] = df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'].astype(str).str.strip()
             else:
-                df_mapeamentos['PARTE_ANTES_BARRA_ATUAL'] = df_mapeamentos['PARTE_ANTES_BARRA_ATUAL'].astype(str).str.strip()
-                df_mapeamentos['PARTE_ANTES_BARRA_NOVA'] = df_mapeamentos['PARTE_ANTES_BARRA_NOVA'].astype(str).str.strip()
+                df_mapeamentos['SEU_NUMERO_COMPLETO_ATUAL'] = df_mapeamentos['SEU_NUMERO_COMPLETO_ATUAL'].astype(str).str.strip()
+                df_mapeamentos['SEU_NUMERO_NOVO'] = df_mapeamentos['SEU_NUMERO_NOVO'].astype(str).str.strip()
             
             # Armazenar dados
             self.df_mapeamentos = df_mapeamentos
@@ -1330,21 +1336,16 @@ class EditorGraficoDialog(QDialog):
                 if valor_cnab in valores_atuais:
                     registros_encontrados += 1
         else:
-            # Para SEU_NUMERO, comparar apenas a parte antes da barra
-            valores_atuais = set(df['PARTE_ANTES_BARRA_ATUAL'].astype(str))
+            # Para SEU_NUMERO, comparar o valor completo (com barra e dígitos)
+            valores_atuais = set(df['SEU_NUMERO_COMPLETO_ATUAL'].astype(str))
             campo_cnab = 'seu_numero'
             nome_campo = 'Seu Número'
             
             registros_encontrados = 0
             for detalhe in self.dados_editados:
                 valor_cnab = str(detalhe.get(campo_cnab, '')).strip()
-                # Extrair apenas a parte antes da barra para comparação
-                if '/' in valor_cnab:
-                    parte_antes_barra = valor_cnab.split('/')[0]
-                else:
-                    parte_antes_barra = valor_cnab
-                
-                if parte_antes_barra in valores_atuais:
+                # Comparar o valor completo
+                if valor_cnab in valores_atuais:
                     registros_encontrados += 1
         
         # Gerar preview text
@@ -1362,11 +1363,17 @@ class EditorGraficoDialog(QDialog):
                 corrigido = row['NOSSO_NUMERO_CORRIGIDO']
                 preview_lines.append(f"  {atual} → {corrigido}")
             else:
-                atual = row['PARTE_ANTES_BARRA_ATUAL']
-                novo = row['PARTE_ANTES_BARRA_NOVA']
+                atual = row['SEU_NUMERO_COMPLETO_ATUAL']
+                novo = row['SEU_NUMERO_NOVO']
                 
-                # Para Seu Número, mostrar que a barra será removida
-                preview_lines.append(f"  {atual}/... → {novo} (barra e dígitos removidos)")
+                # Para Seu Número, mostrar como ficará após o mapeamento
+                if '/' in atual:
+                    parte_depois_barra = atual.split('/', 1)[1]
+                    resultado_mapeamento = f"{novo}/{parte_depois_barra}"
+                else:
+                    resultado_mapeamento = novo
+                
+                preview_lines.append(f"  {atual} → {resultado_mapeamento}")
                 continue
         
         if len(df) > 5:
@@ -1374,7 +1381,8 @@ class EditorGraficoDialog(QDialog):
         
         if self.tipo_mapeamento_atual == 'seu_numero':
             preview_lines.append("")
-            preview_lines.append("⚠️ Para SEU_NUMERO: a barra (/) e dígitos à direita serão REMOVIDOS completamente")
+            preview_lines.append("ℹ️ Para SEU_NUMERO: a parte antes da barra será substituída, preservando /dígitos")
+            preview_lines.append("⚠️ A barra e dígitos serão removidos apenas no arquivo CNAB final")
         
         preview_text = "\n".join(preview_lines)
         self.preview_mapeamentos.setText(preview_text)
@@ -1415,19 +1423,19 @@ class EditorGraficoDialog(QDialog):
                     
                     mapeamentos[atual] = corrigido
                 else:
-                    # Para SEU_NUMERO, usar apenas as partes antes da barra
-                    parte_atual = str(row['PARTE_ANTES_BARRA_ATUAL']).strip()
-                    parte_nova = str(row['PARTE_ANTES_BARRA_NOVA']).strip()
+                    # Para SEU_NUMERO, usar o valor completo como chave e o novo valor
+                    valor_completo_atual = str(row['SEU_NUMERO_COMPLETO_ATUAL']).strip()
+                    valor_novo = str(row['SEU_NUMERO_NOVO']).strip()
                     
-                    # Validar parte nova (aceita alfanumérico como 49635C)
-                    if len(parte_nova) > 10 or not parte_nova.replace(' ', '').isalnum():
+                    # Validar valor novo (aceita alfanumérico como 49635C)
+                    if len(valor_novo) > 10 or not valor_novo.replace(' ', '').isalnum():
                         QMessageBox.warning(self, "Valor Inválido", 
-                            f"Parte antes da barra inválida: '{parte_nova}'\n"
+                            f"Seu Número novo inválido: '{valor_novo}'\n"
                             "Deve conter apenas letras e números e ter no máximo 10 caracteres.\n"
                             "Exemplos válidos: 49635, 49635C, ABC123")
                         return
                     
-                    mapeamentos[parte_atual] = parte_nova
+                    mapeamentos[valor_completo_atual] = valor_novo
             
             # Debug: mostrar mapeamentos carregados
             if self.tipo_mapeamento_atual == 'seu_numero':
@@ -1447,24 +1455,24 @@ class EditorGraficoDialog(QDialog):
                     else:
                         continue  # Não há mapeamento para este registro
                 else:
-                    # Para SEU_NUMERO, extrair parte antes da barra para comparação
+                    # Para SEU_NUMERO, comparar o valor completo (com barra e dígitos)
                     valor_seu_numero = str(detalhe.get('seu_numero', '')).strip()
                     coluna_tabela = 3
                     
-                    if '/' in valor_seu_numero:
-                        parte_antes_atual = valor_seu_numero.split('/')[0]
-                        parte_depois_barra = '/' + valor_seu_numero.split('/', 1)[1]
-                    else:
-                        parte_antes_atual = valor_seu_numero
-                        parte_depois_barra = ''
-                    
                     # Debug: adicionar informações
-                    debug_info.append(f"Registro {i+1}: '{parte_antes_atual}' -> {'SIM' if parte_antes_atual in mapeamentos else 'NÃO'}")
+                    debug_info.append(f"Registro {i+1}: '{valor_seu_numero}' -> {'SIM' if valor_seu_numero in mapeamentos else 'NÃO'}")
                     
-                    if parte_antes_atual in mapeamentos:
-                        parte_nova = mapeamentos[parte_antes_atual]
-                        # Usar apenas a parte nova (sem barra nem dígitos à direita)
-                        novo_valor = parte_nova
+                    if valor_seu_numero in mapeamentos:
+                        # Preservar a estrutura: substituir apenas a parte antes da barra
+                        valor_novo_planilha = mapeamentos[valor_seu_numero]
+                        
+                        if '/' in valor_seu_numero:
+                            # Manter a barra e dígitos originais
+                            parte_depois_barra = valor_seu_numero.split('/', 1)[1]
+                            novo_valor = f"{valor_novo_planilha}/{parte_depois_barra}"
+                        else:
+                            # Se não tem barra, usar apenas o novo valor
+                            novo_valor = valor_novo_planilha
                     else:
                         continue  # Não há mapeamento para este registro
                 

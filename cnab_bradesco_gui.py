@@ -1429,8 +1429,14 @@ class EditorGraficoDialog(QDialog):
                     
                     mapeamentos[parte_atual] = parte_nova
             
+            # Debug: mostrar mapeamentos carregados
+            if self.tipo_mapeamento_atual == 'seu_numero':
+                print(f"DEBUG: Mapeamentos carregados: {list(mapeamentos.keys())[:10]}")
+            
             # Aplicar mapeamentos
             alterados = 0
+            debug_info = []  # Para debug
+            
             for i, detalhe in enumerate(self.dados_editados):
                 if self.tipo_mapeamento_atual == 'nosso_numero':
                     valor_atual = str(detalhe.get('nosso_numero', '')).strip()
@@ -1451,6 +1457,9 @@ class EditorGraficoDialog(QDialog):
                     else:
                         parte_antes_atual = valor_seu_numero
                         parte_depois_barra = ''
+                    
+                    # Debug: adicionar informações
+                    debug_info.append(f"Registro {i+1}: '{parte_antes_atual}' -> {'SIM' if parte_antes_atual in mapeamentos else 'NÃO'}")
                     
                     if parte_antes_atual in mapeamentos:
                         parte_nova = mapeamentos[parte_antes_atual]
@@ -1483,12 +1492,21 @@ class EditorGraficoDialog(QDialog):
             self.btn_salvar.setEnabled(True)
             self.atualizar_info_alteracoes()
             
-            # Mostrar resultado
-            QMessageBox.information(self, "Mapeamentos Aplicados", 
-                f"✅ Mapeamentos de {tipo_campo} aplicados com sucesso!\n\n"
-                f"📊 {alterados} registro(s) foram alterados\n"
-                f"📄 {len(df)} mapeamento(s) processados\n"
-                f"🎯 Taxa de aplicação: {(alterados/len(df)*100):.1f}%")
+            # Mostrar resultado com debug para SEU_NUMERO
+            if self.tipo_mapeamento_atual == 'seu_numero' and alterados == 0:
+                debug_text = "\n".join(debug_info[:10])  # Mostrar primeiros 10
+                QMessageBox.information(self, "Debug - Mapeamentos", 
+                    f"🔍 DEBUG - Nenhum mapeamento aplicado\n\n"
+                    f"📊 {alterados} registro(s) foram alterados\n"
+                    f"📄 {len(df)} mapeamento(s) processados\n"
+                    f"🎯 Taxa de aplicação: {(alterados/len(df)*100):.1f}%\n\n"
+                    f"🔍 Primeiros registros analisados:\n{debug_text}")
+            else:
+                QMessageBox.information(self, "Mapeamentos Aplicados", 
+                    f"✅ Mapeamentos de {tipo_campo} aplicados com sucesso!\n\n"
+                    f"📊 {alterados} registro(s) foram alterados\n"
+                    f"📄 {len(df)} mapeamento(s) processados\n"
+                    f"🎯 Taxa de aplicação: {(alterados/len(df)*100):.1f}%")
             
         except Exception as e:
             QMessageBox.critical(self, "Erro", 

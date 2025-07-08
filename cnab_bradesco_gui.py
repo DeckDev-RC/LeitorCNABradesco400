@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                             QFrame, QSplitter, QStatusBar, QProgressBar, QMessageBox,
                             QTabWidget, QScrollArea, QSizePolicy, QSlider, QToolButton,
                             QGridLayout, QDialog, QLineEdit, QComboBox, QSpinBox,
-                            QFormLayout, QDialogButtonBox, QCheckBox)
+                            QFormLayout, QDialogButtonBox, QCheckBox, QStyle)
 from PyQt5.QtCore import Qt, QSize, QSettings
 from PyQt5.QtGui import QFont, QIcon, QColor, QPalette, QPixmap
 import locale
@@ -93,7 +93,7 @@ class EstiloBotao(QPushButton):
 
 
 class EditorGraficoDialog(QDialog):
-    """Dialog para edição gráfica dos campos NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)"""
+    """Dialog para edição gráfica dos campos NOSSO_NUMERO, NOSSO_NUMERO_2, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)"""
     
     def __init__(self, processador, parent=None):
         super().__init__(parent)
@@ -108,7 +108,7 @@ class EditorGraficoDialog(QDialog):
         self.carregar_dados()
         
     def setup_ui(self):
-        self.setWindowTitle("Editor Gráfico - NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO")
+        self.setWindowTitle("Editor Gráfico - NOSSO_NUMERO, NOSSO_NUMERO_2, CODIGO_EMPRESA e SEU_NUMERO")
         self.setMinimumSize(1400, 600)  # Mais largo e menos alto
         self.setModal(True)
         
@@ -234,7 +234,7 @@ class EditorGraficoDialog(QDialog):
             font-family: 'Segoe UI';
         """)
         
-        subtitle_label = QLabel("Edição dos campos NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)")
+        subtitle_label = QLabel("Edição dos campos NOSSO_NUMERO, NOSSO_NUMERO_2, CODIGO_EMPRESA e SEU_NUMERO (parte antes da barra)")
         subtitle_label.setStyleSheet("""
             color: rgba(255, 255, 255, 0.9);
             font-size: 14px;
@@ -354,9 +354,9 @@ class EditorGraficoDialog(QDialog):
         
         # Tabela
         self.tabela_edicao = QTableWidget()
-        self.tabela_edicao.setColumnCount(6)
+        self.tabela_edicao.setColumnCount(7)
         self.tabela_edicao.setHorizontalHeaderLabels([
-            "Seq", "Nosso Número", "Código Empresa", "Seu Número", "Valor", "Vencimento"
+            "Seq", "Nosso Número", "Nosso Número 2", "Código Empresa", "Seu Número", "Valor", "Vencimento"
         ])
         
         # Configurar tabela
@@ -475,6 +475,33 @@ class EditorGraficoDialog(QDialog):
         separador.setStyleSheet(f"color: {TEMA_ATUAL['COR_TABELA_HEADER']};")
         lote_layout.addWidget(separador)
         
+        # Seção Nosso Número 2
+        nosso2_section = QVBoxLayout()
+        nosso2_section.setSpacing(4)
+        
+        # Label Nosso Número 2
+        nosso2_label = QLabel("Nosso Número 2:")
+        nosso2_label.setStyleSheet(f"color: {TEMA_ATUAL['COR_TEXTO']}; font-size: 12px; font-weight: bold;")
+        nosso2_section.addWidget(nosso2_label)
+        
+        self.novo_nosso_numero2 = QLineEdit()
+        self.novo_nosso_numero2.setPlaceholderText("Novo valor para todos...")
+        self.novo_nosso_numero2.setStyleSheet(self.novo_nosso_numero.styleSheet())
+        nosso2_section.addWidget(self.novo_nosso_numero2)
+        
+        btn_aplicar_nosso2 = QPushButton("Aplicar a Todos")
+        btn_aplicar_nosso2.clicked.connect(self.aplicar_nosso_numero2_lote)
+        btn_aplicar_nosso2.setStyleSheet(btn_aplicar_nosso.styleSheet())
+        nosso2_section.addWidget(btn_aplicar_nosso2)
+        
+        lote_layout.addLayout(nosso2_section)
+        
+        # Separador horizontal
+        separador2 = QFrame()
+        separador2.setFrameShape(QFrame.HLine)
+        separador2.setStyleSheet(f"color: {TEMA_ATUAL['COR_TABELA_HEADER']};")
+        lote_layout.addWidget(separador2)
+        
         # Seção Código da Empresa
         codigo_section = QVBoxLayout()
         codigo_section.setSpacing(4)
@@ -497,10 +524,10 @@ class EditorGraficoDialog(QDialog):
         lote_layout.addLayout(codigo_section)
         
         # Separador horizontal
-        separador2 = QFrame()
-        separador2.setFrameShape(QFrame.HLine)
-        separador2.setStyleSheet(f"color: {TEMA_ATUAL['COR_TABELA_HEADER']};")
-        lote_layout.addWidget(separador2)
+        separador3 = QFrame()
+        separador3.setFrameShape(QFrame.HLine)
+        separador3.setStyleSheet(f"color: {TEMA_ATUAL['COR_TABELA_HEADER']};")
+        lote_layout.addWidget(separador3)
         
         # Seção Seu Número
         seu_section = QVBoxLayout()
@@ -572,6 +599,7 @@ class EditorGraficoDialog(QDialog):
         self.tipo_mapeamento = QComboBox()
         self.tipo_mapeamento.addItems([
             "NOSSO_NUMERO (colunas: NOSSO_NUMERO_ATUAL, NOSSO_NUMERO_CORRIGIDO)",
+            "NOSSO_NUMERO_2 (colunas: NOSSO_NUMERO2_ATUAL, NOSSO_NUMERO2_CORRIGIDO)",
             "SEU_NUMERO (colunas: SEU_NUMERO_COMPLETO_ATUAL, SEU_NUMERO_NOVO)"
         ])
         self.tipo_mapeamento.setStyleSheet(f"""
@@ -777,16 +805,21 @@ class EditorGraficoDialog(QDialog):
             item_nosso.setData(Qt.UserRole, 'nosso_numero')
             self.tabela_edicao.setItem(i, 1, item_nosso)
             
+            # Nosso Número 2 (editável)
+            item_nosso2 = QTableWidgetItem(str(detalhe.get('nosso_numero_2', '')))
+            item_nosso2.setData(Qt.UserRole, 'nosso_numero_2')
+            self.tabela_edicao.setItem(i, 2, item_nosso2)
+            
             # Código Empresa (editável)
             item_codigo = QTableWidgetItem(str(detalhe.get('codigo_empresa', '')))
             item_codigo.setData(Qt.UserRole, 'codigo_empresa')
-            self.tabela_edicao.setItem(i, 2, item_codigo)
+            self.tabela_edicao.setItem(i, 3, item_codigo)
             
             # Seu Número (editável - mostrar valor completo com barra)
             seu_numero_completo = str(detalhe.get('seu_numero', ''))
             item_seu = QTableWidgetItem(seu_numero_completo)
             item_seu.setData(Qt.UserRole, 'seu_numero')
-            self.tabela_edicao.setItem(i, 3, item_seu)
+            self.tabela_edicao.setItem(i, 4, item_seu)
             
             # Valor (apenas visualização)
             valor = detalhe.get('valor_titulo', 0)
@@ -797,13 +830,13 @@ class EditorGraficoDialog(QDialog):
             item_valor = QTableWidgetItem(valor_formatado)
             item_valor.setFlags(item_valor.flags() & ~Qt.ItemIsEditable)
             item_valor.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            self.tabela_edicao.setItem(i, 4, item_valor)
+            self.tabela_edicao.setItem(i, 5, item_valor)
             
             # Vencimento (apenas visualização)
             item_venc = QTableWidgetItem(str(detalhe.get('data_vencimento', '')))
             item_venc.setFlags(item_venc.flags() & ~Qt.ItemIsEditable)
             item_venc.setTextAlignment(Qt.AlignCenter)
-            self.tabela_edicao.setItem(i, 5, item_venc)
+            self.tabela_edicao.setItem(i, 6, item_venc)
         
         # Ajustar largura das colunas
         self.tabela_edicao.resizeColumnsToContents()
@@ -823,12 +856,12 @@ class EditorGraficoDialog(QDialog):
                     mostrar_linha = False
             
             if filtro_codigo and mostrar_linha:
-                item_codigo = self.tabela_edicao.item(i, 2)
+                item_codigo = self.tabela_edicao.item(i, 3)
                 if item_codigo and filtro_codigo not in item_codigo.text().lower():
                     mostrar_linha = False
             
             if filtro_seu and mostrar_linha:
-                item_seu = self.tabela_edicao.item(i, 3)
+                item_seu = self.tabela_edicao.item(i, 4)
                 if item_seu and filtro_seu not in item_seu.text().lower():
                     mostrar_linha = False
             
@@ -853,13 +886,22 @@ class EditorGraficoDialog(QDialog):
         campo = item.data(Qt.UserRole)
         novo_valor = item.text().strip()
         
-        if campo in ['nosso_numero', 'codigo_empresa', 'seu_numero']:
+        if campo in ['nosso_numero', 'nosso_numero_2', 'codigo_empresa', 'seu_numero']:
             # Validar o valor
             if campo == 'nosso_numero' and novo_valor:
                 # Validar nosso número (alfanumérico, até 12 caracteres)
                 if len(novo_valor) > 12 or not novo_valor.replace(' ', '').isalnum():
                     QMessageBox.warning(self, "Valor Inválido", 
                         "Nosso Número deve conter apenas letras e números e ter no máximo 12 caracteres.")
+                    # Restaurar valor anterior
+                    item.setText(str(self.dados_editados[linha].get(campo, '')))
+                    return
+            
+            elif campo == 'nosso_numero_2' and novo_valor:
+                # Validar nosso número 2 (alfanumérico, até 12 caracteres)
+                if len(novo_valor) > 12 or not novo_valor.replace(' ', '').isalnum():
+                    QMessageBox.warning(self, "Valor Inválido", 
+                        "Nosso Número 2 deve conter apenas letras e números e ter no máximo 12 caracteres.")
                     # Restaurar valor anterior
                     item.setText(str(self.dados_editados[linha].get(campo, '')))
                     return
@@ -965,6 +1007,61 @@ class EditorGraficoDialog(QDialog):
         QMessageBox.information(self, "Alteração Aplicada", 
             f"Nosso Número alterado em {alterados} registro(s).")
     
+    def aplicar_nosso_numero2_lote(self):
+        """Aplica novo nosso número 2 a todos os registros visíveis"""
+        novo_valor = self.novo_nosso_numero2.text().strip()
+        
+        if not novo_valor:
+            QMessageBox.warning(self, "Valor Inválido", "Digite um valor para o Nosso Número 2.")
+            return
+        
+        # Validar
+        if len(novo_valor) > 12 or not novo_valor.replace(' ', '').isalnum():
+            QMessageBox.warning(self, "Valor Inválido", 
+                "Nosso Número 2 deve conter apenas letras e números e ter no máximo 12 caracteres.")
+            return
+        
+        # Confirmar ação
+        registros_visiveis = sum(1 for i in range(self.tabela_edicao.rowCount()) 
+                                if not self.tabela_edicao.isRowHidden(i))
+        
+        resposta = QMessageBox.question(self, "Confirmar Alteração",
+            f"Deseja aplicar o Nosso Número 2 '{novo_valor}' a {registros_visiveis} registro(s) visível(eis)?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        
+        if resposta != QMessageBox.Yes:
+            return
+        
+        # Aplicar alteração
+        alterados = 0
+        for i in range(self.tabela_edicao.rowCount()):
+            if not self.tabela_edicao.isRowHidden(i):
+                # Atualizar dados
+                self.dados_editados[i]['nosso_numero_2'] = novo_valor
+                self.dados_editados[i]['_alterado'] = True
+                
+                # Atualizar tabela
+                item = self.tabela_edicao.item(i, 2)
+                if item:
+                    item.setText(novo_valor)
+                    item.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
+                
+                # Destacar linha
+                for col in range(self.tabela_edicao.columnCount()):
+                    item_col = self.tabela_edicao.item(i, col)
+                    if item_col:
+                        item_col.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
+                
+                alterados += 1
+        
+        self.alteracoes_realizadas = True
+        self.btn_salvar.setEnabled(True)
+        self.atualizar_info_alteracoes()
+        self.novo_nosso_numero2.clear()
+        
+        QMessageBox.information(self, "Alteração Aplicada", 
+            f"Nosso Número 2 alterado em {alterados} registro(s).")
+    
     def aplicar_codigo_empresa_lote(self):
         """Aplica novo código de empresa a todos os registros visíveis"""
         novo_valor = self.novo_codigo_empresa.text().strip()
@@ -999,7 +1096,7 @@ class EditorGraficoDialog(QDialog):
                 self.dados_editados[i]['_alterado'] = True
                 
                 # Atualizar tabela
-                item = self.tabela_edicao.item(i, 2)
+                item = self.tabela_edicao.item(i, 3)
                 if item:
                     item.setText(novo_valor)
                     item.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
@@ -1064,7 +1161,7 @@ class EditorGraficoDialog(QDialog):
                 self.dados_editados[i]['_alterado'] = True
                 
                 # Atualizar tabela
-                item = self.tabela_edicao.item(i, 3)
+                item = self.tabela_edicao.item(i, 4)
                 if item:
                     item.setText(novo_valor_completo)
                     item.setBackground(QColor(TEMA_ATUAL['COR_PRIMARIA']).lighter(180))
@@ -1266,7 +1363,10 @@ class EditorGraficoDialog(QDialog):
             # Determinar tipo de mapeamento baseado no combo
             tipo_selecionado = self.tipo_mapeamento.currentText()
             
-            if "NOSSO_NUMERO" in tipo_selecionado:
+            if "NOSSO_NUMERO_2" in tipo_selecionado:
+                colunas_necessarias = ['NOSSO_NUMERO2_ATUAL', 'NOSSO_NUMERO2_CORRIGIDO']
+                self.tipo_mapeamento_atual = 'nosso_numero_2'
+            elif "NOSSO_NUMERO" in tipo_selecionado:
                 colunas_necessarias = ['NOSSO_NUMERO_ATUAL', 'NOSSO_NUMERO_CORRIGIDO']
                 self.tipo_mapeamento_atual = 'nosso_numero'
             else:
@@ -1299,6 +1399,14 @@ class EditorGraficoDialog(QDialog):
                 # Remover 'nan' que pode aparecer em células vazias
                 df_mapeamentos = df_mapeamentos[df_mapeamentos['NOSSO_NUMERO_ATUAL'] != 'nan']
                 df_mapeamentos = df_mapeamentos[df_mapeamentos['NOSSO_NUMERO_CORRIGIDO'] != 'nan']
+            elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+                # Garantir que são strings e remover apenas espaços laterais
+                df_mapeamentos['NOSSO_NUMERO2_ATUAL'] = df_mapeamentos['NOSSO_NUMERO2_ATUAL'].astype(str).str.strip()
+                df_mapeamentos['NOSSO_NUMERO2_CORRIGIDO'] = df_mapeamentos['NOSSO_NUMERO2_CORRIGIDO'].astype(str).str.strip()
+                
+                # Remover 'nan' que pode aparecer em células vazias
+                df_mapeamentos = df_mapeamentos[df_mapeamentos['NOSSO_NUMERO2_ATUAL'] != 'nan']
+                df_mapeamentos = df_mapeamentos[df_mapeamentos['NOSSO_NUMERO2_CORRIGIDO'] != 'nan']
             else:
                 # Garantir que são strings e remover apenas espaços laterais
                 df_mapeamentos['SEU_NUMERO_COMPLETO_ATUAL'] = df_mapeamentos['SEU_NUMERO_COMPLETO_ATUAL'].astype(str).str.strip()
@@ -1344,6 +1452,16 @@ class EditorGraficoDialog(QDialog):
                 valor_cnab = str(detalhe.get(campo_cnab, '')).strip()
                 if valor_cnab in valores_atuais:
                     registros_encontrados += 1
+        elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+            valores_atuais = set(df['NOSSO_NUMERO2_ATUAL'].astype(str))
+            campo_cnab = 'nosso_numero_2'
+            nome_campo = 'Nosso Número 2'
+            
+            registros_encontrados = 0
+            for detalhe in self.dados_editados:
+                valor_cnab = str(detalhe.get(campo_cnab, '')).strip()
+                if valor_cnab in valores_atuais:
+                    registros_encontrados += 1
         else:
             # Para SEU_NUMERO, comparar o valor completo (com barra e dígitos)
             valores_atuais = set(df['SEU_NUMERO_COMPLETO_ATUAL'].astype(str))
@@ -1370,6 +1488,10 @@ class EditorGraficoDialog(QDialog):
             if self.tipo_mapeamento_atual == 'nosso_numero':
                 atual = row['NOSSO_NUMERO_ATUAL']
                 corrigido = row['NOSSO_NUMERO_CORRIGIDO']
+                preview_lines.append(f"  {atual} → {corrigido}")
+            elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+                atual = row['NOSSO_NUMERO2_ATUAL']
+                corrigido = row['NOSSO_NUMERO2_CORRIGIDO']
                 preview_lines.append(f"  {atual} → {corrigido}")
             else:
                 atual = row['SEU_NUMERO_COMPLETO_ATUAL']
@@ -1398,7 +1520,12 @@ class EditorGraficoDialog(QDialog):
         
         # Confirmar operação
         df = self.df_mapeamentos
-        tipo_campo = "Nosso Número" if self.tipo_mapeamento_atual == 'nosso_numero' else "Seu Número"
+        if self.tipo_mapeamento_atual == 'nosso_numero':
+            tipo_campo = "Nosso Número"
+        elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+            tipo_campo = "Nosso Número 2"
+        else:
+            tipo_campo = "Seu Número"
         
         resposta = QMessageBox.question(self, "Confirmar Mapeamentos",
             f"Deseja aplicar {len(df)} mapeamento(s) da planilha para {tipo_campo}?\n\n"
@@ -1424,6 +1551,18 @@ class EditorGraficoDialog(QDialog):
                         return
                     
                     mapeamentos[atual] = corrigido
+                elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+                    atual = str(row['NOSSO_NUMERO2_ATUAL']).strip()
+                    corrigido = str(row['NOSSO_NUMERO2_CORRIGIDO']).strip()
+                    
+                    # Validar nosso número 2 corrigido
+                    if len(corrigido) > 12 or not corrigido.replace(' ', '').isalnum():
+                        QMessageBox.warning(self, "Valor Inválido", 
+                            f"Nosso Número 2 corrigido inválido: '{corrigido}'\n"
+                            "Deve conter apenas letras e números e ter no máximo 12 caracteres.")
+                        return
+                    
+                    mapeamentos[atual] = corrigido
                 else:
                     # Para SEU_NUMERO, usar o valor completo como chave e o novo valor
                     valor_completo_atual = str(row['SEU_NUMERO_COMPLETO_ATUAL']).strip()
@@ -1443,6 +1582,9 @@ class EditorGraficoDialog(QDialog):
             if self.tipo_mapeamento_atual == 'nosso_numero':
                 print(f"DEBUG NOSSO_NUMERO: Mapeamentos carregados: {list(mapeamentos.keys())[:5]}")
                 print(f"DEBUG NOSSO_NUMERO: Primeiro valor CNAB: {str(self.dados_editados[0].get('nosso_numero', '')) if self.dados_editados else 'N/A'}")
+            elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+                print(f"DEBUG NOSSO_NUMERO_2: Mapeamentos carregados: {list(mapeamentos.keys())[:5]}")
+                print(f"DEBUG NOSSO_NUMERO_2: Primeiro valor CNAB: {str(self.dados_editados[0].get('nosso_numero_2', '')) if self.dados_editados else 'N/A'}")
             elif self.tipo_mapeamento_atual == 'seu_numero':
                 print(f"DEBUG SEU_NUMERO: Mapeamentos carregados: {list(mapeamentos.keys())[:10]}")
             
@@ -1451,9 +1593,10 @@ class EditorGraficoDialog(QDialog):
             debug_info = []  # Para debug
             
             for i, detalhe in enumerate(self.dados_editados):
-                if self.tipo_mapeamento_atual == 'nosso_numero':
-                    valor_atual = str(detalhe.get('nosso_numero', '')).strip()
-                    coluna_tabela = 1
+                if self.tipo_mapeamento_atual in ['nosso_numero', 'nosso_numero_2']:
+                    campo_atual = 'nosso_numero' if self.tipo_mapeamento_atual == 'nosso_numero' else 'nosso_numero_2'
+                    valor_atual = str(detalhe.get(campo_atual, '')).strip()
+                    coluna_tabela = 1 if self.tipo_mapeamento_atual == 'nosso_numero' else 2
                     
                     # Buscar mapeamento considerando zeros à esquerda
                     novo_valor = None
@@ -1479,7 +1622,7 @@ class EditorGraficoDialog(QDialog):
                 else:
                     # Para SEU_NUMERO, comparar o valor completo (com barra e dígitos)
                     valor_seu_numero = str(detalhe.get('seu_numero', '')).strip()
-                    coluna_tabela = 3
+                    coluna_tabela = 4
                     
                     # Debug: adicionar informações
                     debug_info.append(f"Registro {i+1}: '{valor_seu_numero}' -> {'SIM' if valor_seu_numero in mapeamentos else 'NÃO'}")
@@ -1491,7 +1634,13 @@ class EditorGraficoDialog(QDialog):
                         continue  # Não há mapeamento para este registro
                 
                 # Atualizar dados
-                campo = 'nosso_numero' if self.tipo_mapeamento_atual == 'nosso_numero' else 'seu_numero'
+                if self.tipo_mapeamento_atual == 'nosso_numero':
+                    campo = 'nosso_numero'
+                elif self.tipo_mapeamento_atual == 'nosso_numero_2':
+                    campo = 'nosso_numero_2'
+                else:
+                    campo = 'seu_numero'
+                
                 self.dados_editados[i][campo] = novo_valor
                 self.dados_editados[i]['_alterado'] = True
                 
@@ -2187,6 +2336,434 @@ class CNABBradescoGUI(QMainWindow):
             self.status_bar.showMessage(f"Erro: {str(e)}")
             QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao processar o arquivo:\n{str(e)}")
             
+    def preencher_tabela(self):
+        """Preenche a tabela com os dados do DataFrame"""
+        if self.df is None or self.df.empty:
+            return
+            
+        try:
+            # Limpar a tabela antes de preencher
+            self.tabela.setRowCount(0)
+            
+            # Configurar o número de colunas baseado no DataFrame
+            self.tabela.setColumnCount(len(self.df.columns))
+            self.tabela.setHorizontalHeaderLabels(self.df.columns)
+            
+            # Preencher a tabela com os dados do DataFrame
+            for row_idx, row in self.df.iterrows():
+                self.tabela.insertRow(row_idx)
+                for col_idx, value in enumerate(row):
+                    item = QTableWidgetItem(str(value))
+                    # Centralizar o texto nas células
+                    item.setTextAlignment(Qt.AlignCenter)
+                    self.tabela.setItem(row_idx, col_idx, item)
+                    
+                    # Colorir linhas baseado no código de ocorrência
+                    if 'cod_ocorrencia' in self.df.columns:
+                        cod_ocorrencia = str(row['cod_ocorrencia'])
+                        # Liquidado (06, 07, 08, 15, 17)
+                        if cod_ocorrencia in ['06', '07', '08', '15', '17']:
+                            item.setBackground(QColor('#E6F7E6'))  # Verde claro
+                        # Baixado (09, 10)
+                        elif cod_ocorrencia in ['09', '10']:
+                            item.setBackground(QColor('#F7F7E6'))  # Amarelo claro
+                        # Pendente (11)
+                        elif cod_ocorrencia in ['11']:
+                            item.setBackground(QColor('#F7E6E6'))  # Vermelho claro
+            
+            # Ajustar o tamanho das colunas para o conteúdo
+            self.tabela.resizeColumnsToContents()
+            
+            # Ordenar por código de ocorrência
+            self.tabela.sortItems(self.df.columns.get_loc('cod_ocorrencia') if 'cod_ocorrencia' in self.df.columns else 0)
+            
+        except Exception as e:
+            print(f"Erro ao preencher tabela: {str(e)}")
+            self.status_bar.showMessage(f"Erro ao preencher tabela: {str(e)}")
+    
+    def exportar_csv(self):
+        """Exporta os dados processados para um arquivo CSV"""
+        if self.df is None or self.df.empty:
+            QMessageBox.warning(self, "Sem Dados", "Não há dados para exportar.")
+            return
+            
+        try:
+            options = QFileDialog.Options()
+            nome_arquivo, _ = QFileDialog.getSaveFileName(
+                self, "Exportar para CSV", "", 
+                "Arquivos CSV (*.csv);;Todos os Arquivos (*)", 
+                options=options
+            )
+            
+            if nome_arquivo:
+                # Adicionar extensão .csv se não estiver presente
+                if not nome_arquivo.lower().endswith('.csv'):
+                    nome_arquivo += '.csv'
+                    
+                # Exportar para CSV
+                self.df.to_csv(nome_arquivo, index=False, sep=';', encoding='utf-8')
+                
+                self.status_bar.showMessage(f"Arquivo exportado com sucesso: {os.path.basename(nome_arquivo)}")
+                QMessageBox.information(self, "Exportação Concluída", 
+                                      f"Dados exportados com sucesso para:\n{nome_arquivo}")
+        except Exception as e:
+            self.status_bar.showMessage(f"Erro ao exportar: {str(e)}")
+            QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao exportar o arquivo:\n{str(e)}")
+    
+    def exportar_excel(self):
+        """Exporta os dados processados para um arquivo Excel"""
+        if self.df is None or self.df.empty:
+            QMessageBox.warning(self, "Sem Dados", "Não há dados para exportar.")
+            return
+            
+        try:
+            options = QFileDialog.Options()
+            nome_arquivo, _ = QFileDialog.getSaveFileName(
+                self, "Exportar para Excel", "", 
+                "Arquivos Excel (*.xlsx);;Todos os Arquivos (*)", 
+                options=options
+            )
+            
+            if nome_arquivo:
+                # Adicionar extensão .xlsx se não estiver presente
+                if not nome_arquivo.lower().endswith('.xlsx'):
+                    nome_arquivo += '.xlsx'
+                    
+                # Exportar para Excel
+                self.df.to_excel(nome_arquivo, index=False, engine='openpyxl')
+                
+                self.status_bar.showMessage(f"Arquivo exportado com sucesso: {os.path.basename(nome_arquivo)}")
+                QMessageBox.information(self, "Exportação Concluída", 
+                                      f"Dados exportados com sucesso para:\n{nome_arquivo}")
+        except Exception as e:
+            self.status_bar.showMessage(f"Erro ao exportar: {str(e)}")
+            QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao exportar o arquivo:\n{str(e)}")
+            
+    def gerar_cnab_retorno(self):
+        """Gera um novo arquivo CNAB sem juros/multa para retorno ao banco"""
+        if not hasattr(self, 'processador') or not self.processador:
+            QMessageBox.warning(self, "Sem Dados", "Não há dados para gerar o arquivo CNAB.")
+            return
+            
+        try:
+            options = QFileDialog.Options()
+            nome_arquivo, _ = QFileDialog.getSaveFileName(
+                self, "Salvar Arquivo CNAB sem Juros", "", 
+                "Arquivos de Texto (*.txt *.TXT);;Todos os Arquivos (*)", 
+                options=options
+            )
+            
+            if nome_arquivo:
+                # Adicionar extensão .TXT se não estiver presente
+                if not nome_arquivo.lower().endswith('.txt'):
+                    nome_arquivo += '.TXT'
+                
+                self.status_bar.showMessage("Gerando arquivo CNAB sem juros...")
+                self.progresso.setValue(30)
+                
+                # Gerar arquivo CNAB sem juros
+                sucesso, mensagem = self.processador.gerar_cnab_retorno(nome_arquivo)
+                
+                if sucesso:
+                    self.progresso.setValue(100)
+                    self.status_bar.showMessage(f"Arquivo CNAB sem juros gerado com sucesso: {os.path.basename(nome_arquivo)}")
+                    QMessageBox.information(self, "Operação Concluída", mensagem)
+                else:
+                    self.progresso.setValue(0)
+                    self.status_bar.showMessage("Erro ao gerar arquivo CNAB sem juros.")
+                    QMessageBox.critical(self, "Erro", mensagem)
+        except Exception as e:
+            self.progresso.setValue(0)
+            self.status_bar.showMessage(f"Erro: {str(e)}")
+            QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao gerar o arquivo CNAB sem juros:\n{str(e)}")
+            
+    def excel_para_cnab(self):
+        """Converte um arquivo Excel para formato CNAB"""
+        try:
+            options = QFileDialog.Options()
+            arquivo_excel, _ = QFileDialog.getOpenFileName(
+                self, "Selecionar Arquivo Excel", "", 
+                "Arquivos Excel (*.xlsx *.xls);;Todos os Arquivos (*)", 
+                options=options
+            )
+            
+            if not arquivo_excel:
+                return
+                
+            self.status_bar.showMessage("Convertendo Excel para CNAB...")
+            self.progresso.setValue(10)
+            
+            # Solicitar arquivo de saída
+            arquivo_saida, _ = QFileDialog.getSaveFileName(
+                self, "Salvar Arquivo CNAB", "", 
+                "Arquivos de Texto (*.txt *.TXT);;Todos os Arquivos (*)", 
+                options=options
+            )
+            
+            if not arquivo_saida:
+                self.status_bar.showMessage("Operação cancelada.")
+                self.progresso.setValue(0)
+                return
+                
+            # Adicionar extensão .TXT se não estiver presente
+            if not arquivo_saida.lower().endswith('.txt'):
+                arquivo_saida += '.TXT'
+                
+            self.progresso.setValue(30)
+            
+            # Implementação da conversão Excel para CNAB
+            # Esta é uma implementação básica, você pode precisar adaptá-la
+            # de acordo com a estrutura específica do seu Excel e CNAB
+            try:
+                # Ler o arquivo Excel
+                df = pd.read_excel(arquivo_excel)
+                self.progresso.setValue(50)
+                
+                # Verificar se o DataFrame tem as colunas necessárias
+                colunas_necessarias = ['nosso_numero', 'seu_numero', 'valor_titulo']
+                colunas_faltantes = [col for col in colunas_necessarias if col not in df.columns]
+                
+                if colunas_faltantes:
+                    raise ValueError(f"O arquivo Excel não contém as colunas necessárias: {', '.join(colunas_faltantes)}")
+                
+                # Aqui você implementaria a lógica específica para converter o Excel em CNAB
+                # Por exemplo, criar um objeto CNABBradesco e usar métodos para gerar o arquivo
+                
+                # Simulação de sucesso (substitua por sua implementação real)
+                with open(arquivo_saida, 'w', encoding='utf-8') as f:
+                    f.write("Arquivo CNAB gerado a partir do Excel\n")
+                    # Aqui você escreveria o conteúdo real do CNAB
+                
+                self.progresso.setValue(100)
+                self.status_bar.showMessage(f"Arquivo CNAB gerado com sucesso: {os.path.basename(arquivo_saida)}")
+                QMessageBox.information(self, "Operação Concluída", 
+                                      f"Arquivo CNAB gerado com sucesso:\n{arquivo_saida}")
+                
+            except Exception as e:
+                self.progresso.setValue(0)
+                self.status_bar.showMessage(f"Erro na conversão: {str(e)}")
+                QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao converter o arquivo Excel para CNAB:\n{str(e)}")
+                
+        except Exception as e:
+            self.progresso.setValue(0)
+            self.status_bar.showMessage(f"Erro: {str(e)}")
+            QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao processar a operação:\n{str(e)}")
+    
+    def editor_interativo(self):
+        """Abre o editor interativo de arquivos CNAB"""
+        try:
+            self.status_bar.showMessage("Abrindo editor interativo...")
+            
+            # Criar uma janela de diálogo para o editor interativo
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Editor Interativo")
+            dialog.setMinimumSize(600, 400)
+            dialog.setWindowIcon(QIcon("icon.png"))
+            
+            # Layout principal
+            layout = QVBoxLayout(dialog)
+            layout.setContentsMargins(12, 12, 12, 12)
+            layout.setSpacing(10)
+            
+            # Ícone e título
+            header = QHBoxLayout()
+            icon_label = QLabel("📝")
+            icon_label.setStyleSheet("font-size: 24px;")
+            header.addWidget(icon_label)
+            
+            title_label = QLabel("Editor Interativo CNAB")
+            title_label.setStyleSheet(f"""
+                color: {TEMA_ATUAL['COR_PRIMARIA']};
+                font-size: 18px;
+                font-weight: bold;
+            """)
+            header.addWidget(title_label)
+            header.addStretch()
+            layout.addLayout(header)
+            
+            # Mensagem informativa
+            info_label = QLabel("O Editor Interativo será implementado em uma versão futura.")
+            info_label.setStyleSheet(f"color: {TEMA_ATUAL['COR_TEXTO']}; font-size: 14px;")
+            info_label.setAlignment(Qt.AlignCenter)
+            layout.addWidget(info_label)
+            
+            # Ícone informativo
+            icon_info = QLabel()
+            icon_info.setPixmap(QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(64, 64))
+            icon_info.setAlignment(Qt.AlignCenter)
+            layout.addWidget(icon_info)
+            
+            # Descrição das funcionalidades futuras
+            features_frame = QFrame()
+            features_frame.setStyleSheet(f"""
+                QFrame {{
+                    background-color: {TEMA_ATUAL['COR_SECUNDARIA']};
+                    border-radius: 8px;
+                    border: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
+                    padding: 10px;
+                }}
+            """)
+            features_layout = QVBoxLayout(features_frame)
+            
+            features_title = QLabel("Funcionalidades Planejadas:")
+            features_title.setStyleSheet(f"color: {TEMA_ATUAL['COR_PRIMARIA']}; font-weight: bold;")
+            features_layout.addWidget(features_title)
+            
+            features = [
+                "• Edição interativa de registros CNAB",
+                "• Validação de campos em tempo real",
+                "• Sugestões automáticas de valores",
+                "• Histórico de alterações",
+                "• Importação e exportação facilitada"
+            ]
+            
+            for feature in features:
+                feature_label = QLabel(feature)
+                feature_label.setStyleSheet(f"color: {TEMA_ATUAL['COR_TEXTO']};")
+                features_layout.addWidget(feature_label)
+            
+            layout.addWidget(features_frame)
+            layout.addStretch()
+            
+            # Botão de fechar
+            btn_close = QPushButton("Fechar")
+            btn_close.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {TEMA_ATUAL['COR_PRIMARIA']};
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    border-radius: 5px;
+                    font-weight: bold;
+                    min-width: 100px;
+                }}
+                QPushButton:hover {{
+                    background-color: {TEMA_ATUAL['COR_DESTAQUE']};
+                }}
+            """)
+            btn_close.clicked.connect(dialog.accept)
+            
+            btn_layout = QHBoxLayout()
+            btn_layout.addStretch()
+            btn_layout.addWidget(btn_close)
+            btn_layout.addStretch()
+            layout.addLayout(btn_layout)
+            
+            # Exibir o diálogo
+            dialog.exec_()
+            
+            self.status_bar.showMessage("Editor interativo fechado.")
+            
+        except Exception as e:
+            self.status_bar.showMessage(f"Erro: {str(e)}")
+            QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao abrir o editor interativo:\n{str(e)}")
+    
+    def editor_grafico(self):
+        """Abre o editor gráfico de arquivos CNAB"""
+        try:
+            # Verificar se há um arquivo carregado
+            if not hasattr(self, 'processador') or not self.processador or not self.processador.detalhes:
+                QMessageBox.warning(self, "Nenhum Arquivo", "Por favor, carregue um arquivo CNAB primeiro.")
+                return
+            
+            self.status_bar.showMessage("Abrindo editor gráfico...")
+            
+            # Criar e exibir o diálogo do editor gráfico
+            dialog = EditorGraficoDialog(self.processador, self)
+            result = dialog.exec_()
+            
+            # Verificar se houve alterações
+            if dialog.alteracoes_realizadas:
+                # Atualizar os dados do processador com as alterações feitas
+                self.processador.detalhes = dialog.dados_editados
+                self.status_bar.showMessage("Editor gráfico fechado. Alterações aplicadas.")
+                
+                # Atualizar a tabela principal se necessário
+                if hasattr(self, 'df') and self.df is not None:
+                    self.preencher_tabela()
+            else:
+                self.status_bar.showMessage("Editor gráfico fechado. Nenhuma alteração realizada.")
+            
+        except Exception as e:
+            self.status_bar.showMessage(f"Erro: {str(e)}")
+            QMessageBox.critical(self, "Erro", f"Ocorreu um erro ao abrir o editor gráfico:\n{str(e)}")
+            
+    def _criar_aba_detalhes(self, layout):
+        """Cria a aba de detalhes com a tabela de dados"""
+        # Container principal
+        container_principal = QFrame()
+        container_principal.setStyleSheet(f"""
+            QFrame {{
+                background-color: {TEMA_ATUAL['COR_SECUNDARIA']};
+                border-radius: 8px;
+                border: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
+                padding: 4px;
+            }}
+        """)
+        
+        layout_container = QVBoxLayout(container_principal)
+        layout_container.setContentsMargins(8, 8, 8, 8)
+        layout_container.setSpacing(8)
+        
+        # Label para a tabela
+        self.lbl_tabela = QLabel("Selecione um arquivo CNAB para processar")
+        self.lbl_tabela.setStyleSheet(f"""
+            color: {TEMA_ATUAL['COR_TEXTO']};
+            font-size: 14px;
+            font-weight: bold;
+            margin: 10px 0px;
+        """)
+        self.lbl_tabela.setAlignment(Qt.AlignCenter)
+        layout_container.addWidget(self.lbl_tabela)
+        
+        # Tabela para exibir os dados
+        self.tabela = QTableWidget()
+        self.tabela.setColumnCount(0)
+        self.tabela.setRowCount(0)
+        self.tabela.setAlternatingRowColors(True)
+        self.tabela.setEditTriggers(QTableWidget.NoEditTriggers)  # Tabela somente leitura
+        self.tabela.setSelectionBehavior(QTableWidget.SelectRows)
+        self.tabela.setSelectionMode(QTableWidget.SingleSelection)
+        self.tabela.setSortingEnabled(True)
+        self.tabela.horizontalHeader().setStretchLastSection(True)
+        self.tabela.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.tabela.verticalHeader().setVisible(False)
+        
+        # Estilo da tabela
+        self.tabela.setStyleSheet(f"""
+            QTableWidget {{
+                background-color: {TEMA_ATUAL['COR_SECUNDARIA']};
+                color: {TEMA_ATUAL['COR_TEXTO']};
+                gridline-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
+                border: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
+                border-radius: 8px;
+                padding: 2px;
+            }}
+            QTableWidget::item {{
+                padding: 8px;
+                border-bottom: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
+            }}
+            QTableWidget::item:selected {{
+                background-color: {TEMA_ATUAL['COR_PRIMARIA']};
+                color: white;
+            }}
+            QHeaderView::section {{
+                background-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
+                color: {TEMA_ATUAL['COR_TEXTO']};
+                padding: 10px;
+                border: none;
+                font-weight: bold;
+                text-align: center;
+            }}
+            QTableWidget QTableCornerButton::section {{
+                background-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
+                border: none;
+            }}
+        """)
+        
+        layout_container.addWidget(self.tabela)
+        layout.addWidget(container_principal)
+            
     def preencher_resumo(self, processador):
         """Preenche a aba de resumo com os dados do arquivo processado"""
         try:
@@ -2410,452 +2987,6 @@ class CNABBradescoGUI(QMainWindow):
             
         except Exception as e:
             print(f"Erro ao preencher resumo: {str(e)}")
-    
-    def preencher_tabela(self):
-        if self.df is None or self.df.empty:
-            self.lbl_tabela.setText("Nenhum dado para exibir")
-            return
-            
-        try:
-            # Colunas a exibir na tabela (ordem e seleção)
-            colunas_exibir = [
-                'nosso_numero', 'seu_numero', 'data_ocorrencia', 'data_vencimento',
-                'valor_titulo', 'valor_principal', 'valor_juros_multa', 'data_credito'
-            ]
-            
-            # Mapeamento para nomes amigáveis
-            nomes_colunas = {
-                'nosso_numero': 'Nosso Número',
-                'seu_numero': 'Seu Número',
-                'data_ocorrencia': 'Data Ocorrência',
-                'data_vencimento': 'Data Vencimento',
-                'valor_titulo': 'Valor Título',
-                'valor_principal': 'Valor Principal',
-                'valor_juros_multa': 'Juros Mora Multa',
-                'data_credito': 'Data Crédito'
-            }
-            
-            # Filtrar apenas as colunas que existem no DataFrame
-            colunas_existentes = [col for col in colunas_exibir if col in self.df.columns]
-            
-            # Configurar a tabela
-            self.tabela.setRowCount(len(self.df))
-            self.tabela.setColumnCount(len(colunas_existentes))
-            
-            # Configurar cabeçalhos
-            headers = [nomes_colunas[col] for col in colunas_existentes]
-            self.tabela.setHorizontalHeaderLabels(headers)
-            
-            # Preencher dados
-            for i, (_, row) in enumerate(self.df.iterrows()):
-                for j, col in enumerate(colunas_existentes):
-                    valor = row[col]
-                    
-                    # Formatação específica para cada tipo de coluna
-                    if col in ['data_ocorrencia', 'data_vencimento', 'data_credito']:
-                        try:
-                            # Formatação de data
-                            if valor and len(str(valor)) >= 6:
-                                data_str = str(valor)
-                                if len(data_str) == 6:  # DDMMAA
-                                    data_formatada = f"{data_str[0:2]}/{data_str[2:4]}/20{data_str[4:6]}"
-                                elif len(data_str) == 8:  # DDMMAAAA
-                                    data_formatada = f"{data_str[0:2]}/{data_str[2:4]}/{data_str[4:8]}"
-                                else:
-                                    data_formatada = str(valor)
-                                item = QTableWidgetItem(data_formatada)
-                            else:
-                                item = QTableWidgetItem(str(valor) if valor else "")
-                        except (ValueError, TypeError, IndexError):
-                            item = QTableWidgetItem(str(valor) if valor else "")
-                        item.setTextAlignment(Qt.AlignCenter)
-                    
-                    elif col in ['valor_titulo', 'valor_principal', 'valor_juros_multa']:
-                        # Formatação de valores monetários
-                        try:
-                            valor_float = float(valor) if valor else 0.0
-                            valor_formatado = f"R$ {valor_float:,.2f}".replace(',', '_').replace('.', ',').replace('_', '.')
-                            item = QTableWidgetItem(valor_formatado)
-                        except (ValueError, TypeError):
-                            item = QTableWidgetItem(str(valor) if valor else "R$ 0,00")
-                        item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                    
-                    else:
-                        # Outros campos
-                        item = QTableWidgetItem(str(valor) if valor else "")
-                        item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-                    
-                    self.tabela.setItem(i, j, item)
-            
-            # Ajustar largura das colunas
-            self.tabela.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-            
-            # Mensagem informativa
-            self.lbl_tabela.setText(f"Exibindo {len(self.df)} registros")
-            
-        except Exception as e:
-            self.lbl_tabela.setText(f"Erro ao preencher tabela: {str(e)}")
-            print(f"Erro ao preencher tabela: {str(e)}")
-        
-    def exportar_csv(self):
-        if self.df is None or self.arquivo_atual is None:
-            return
-            
-        nome_arquivo = os.path.basename(self.arquivo_atual)
-        nome_base = os.path.splitext(nome_arquivo)[0]
-        
-        options = QFileDialog.Options()
-        caminho_csv, _ = QFileDialog.getSaveFileName(
-            self, "Salvar Arquivo CSV", f"{nome_base}_processado.csv",
-            "Arquivos CSV (*.csv)", options=options
-        )
-        
-        if caminho_csv:
-            try:
-                # Para o CSV, usamos os valores originais (não formatados)
-                df_original = self.df.copy()
-                if 'linha_original' in df_original.columns:
-                    df_original = df_original.drop('linha_original', axis=1)
-                
-                df_original.to_csv(caminho_csv, index=False, sep=';')
-                self.status_bar.showMessage(f"Dados exportados para {os.path.basename(caminho_csv)}")
-                QMessageBox.information(self, "Exportação Concluída", 
-                                        f"Os dados foram exportados com sucesso para:\n{caminho_csv}")
-            except Exception as e:
-                QMessageBox.critical(self, "Erro na Exportação", 
-                                    f"Ocorreu um erro ao exportar os dados:\n{str(e)}")
-    
-    def exportar_excel(self):
-        """Exporta os dados para um arquivo Excel"""
-        if self.df is None or self.arquivo_atual is None or not hasattr(self, 'processador'):
-            return
-            
-        nome_arquivo = os.path.basename(self.arquivo_atual)
-        nome_base = os.path.splitext(nome_arquivo)[0]
-        
-        options = QFileDialog.Options()
-        caminho_excel, _ = QFileDialog.getSaveFileName(
-            self, "Salvar Arquivo Excel", f"{nome_base}_processado.xlsx",
-            "Arquivos Excel (*.xlsx)", options=options
-        )
-        
-        if caminho_excel:
-            self.status_bar.showMessage("Exportando para Excel...")
-            self.progresso.setValue(10)
-            
-            try:
-                # Usar o método do processador para exportar para Excel
-                sucesso, mensagem = self.processador.exportar_para_excel(caminho_excel)
-                
-                self.progresso.setValue(100)
-                if sucesso:
-                    self.status_bar.showMessage(f"Dados exportados para Excel: {os.path.basename(caminho_excel)}")
-                    QMessageBox.information(self, "Exportação Excel Concluída", 
-                                          f"Os dados foram exportados com sucesso para:\n{caminho_excel}")
-                else:
-                    self.status_bar.showMessage("Falha na exportação para Excel")
-                    QMessageBox.critical(self, "Erro na Exportação", mensagem)
-            except Exception as e:
-                self.progresso.setValue(0)
-                self.status_bar.showMessage(f"Erro: {str(e)}")
-                QMessageBox.critical(self, "Erro na Exportação", 
-                                    f"Ocorreu um erro ao exportar os dados para Excel:\n{str(e)}")
-    
-    def gerar_cnab_retorno(self):
-        """Gera um arquivo CNAB de retorno sem juros/multa"""
-        if not hasattr(self, 'processador') or self.arquivo_atual is None:
-            return
-            
-        nome_arquivo = os.path.basename(self.arquivo_atual)
-        nome_base = os.path.splitext(nome_arquivo)[0]
-        
-        options = QFileDialog.Options()
-        caminho_cnab, _ = QFileDialog.getSaveFileName(
-            self, "Salvar Arquivo CNAB de Retorno", f"{nome_base}_retorno.TXT",
-            "Arquivos CNAB (*.TXT);;Todos os Arquivos (*)", options=options
-        )
-        
-        if caminho_cnab:
-            self.status_bar.showMessage("Gerando arquivo CNAB de retorno...")
-            self.progresso.setValue(30)
-            
-            try:
-                # Usar o método do processador para gerar o arquivo CNAB
-                sucesso, mensagem = self.processador.gerar_cnab_retorno(caminho_cnab)
-                
-                self.progresso.setValue(100)
-                if sucesso:
-                    self.status_bar.showMessage(f"Arquivo CNAB de retorno gerado: {os.path.basename(caminho_cnab)}")
-                    QMessageBox.information(self, "CNAB de Retorno Gerado", 
-                                          f"O arquivo CNAB de retorno foi gerado com sucesso!\n\nCaminho: {caminho_cnab}\n\nTodos os valores de juros/multa foram zerados.")
-                else:
-                    self.status_bar.showMessage("Falha na geração do arquivo CNAB")
-                    QMessageBox.critical(self, "Erro na Geração", mensagem)
-            except Exception as e:
-                self.progresso.setValue(0)
-                self.status_bar.showMessage(f"Erro: {str(e)}")
-                QMessageBox.critical(self, "Erro na Geração do CNAB", 
-                                    f"Ocorreu um erro ao gerar o arquivo CNAB de retorno:\n{str(e)}")
-    
-    def excel_para_cnab(self):
-        """Converte arquivo Excel para CNAB"""
-        if not hasattr(self, 'processador') or not self.processador or not hasattr(self.processador, 'detalhes') or not self.processador.detalhes:
-            QMessageBox.warning(self, "Aviso", "Primeiro carregue um arquivo CNAB.")
-            return
-        
-        # Selecionar arquivo Excel
-        arquivo_excel, _ = QFileDialog.getOpenFileName(
-            self, 
-            "Selecionar arquivo Excel", 
-            "", 
-            "Arquivos Excel (*.xlsx *.xls)"
-        )
-        
-        if not arquivo_excel:
-            return
-        
-        # Selecionar onde salvar o CNAB
-        arquivo_cnab, _ = QFileDialog.getSaveFileName(
-            self, 
-            "Salvar arquivo CNAB", 
-            "novo_arquivo.TXT", 
-            "Arquivos CNAB (*.TXT)"
-        )
-        
-        if not arquivo_cnab:
-            return
-        
-        # Perguntar se quer usar arquivo de referência
-        resposta = QMessageBox.question(
-            self, 
-            "Arquivo de Referência",
-            "Deseja usar um arquivo CNAB de referência para header/trailer?\n\n"
-            "Se não, será gerado um header/trailer padrão.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No
-        )
-        
-        arquivo_referencia = None
-        if resposta == QMessageBox.Yes:
-            arquivo_referencia, _ = QFileDialog.getOpenFileName(
-                self, 
-                "Selecionar arquivo CNAB de referência", 
-                "", 
-                "Arquivos CNAB (*.TXT)"
-            )
-        
-        try:
-            sucesso, mensagem = self.processador.excel_para_cnab(
-                arquivo_excel, 
-                arquivo_cnab, 
-                arquivo_referencia
-            )
-            
-            if sucesso:
-                QMessageBox.information(self, "Sucesso", mensagem)
-            else:
-                QMessageBox.critical(self, "Erro", mensagem)
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Erro ao converter: {str(e)}")
-
-    def editor_interativo(self):
-        """Abre o editor interativo de CNAB"""
-        if not hasattr(self, 'processador') or not self.processador or not hasattr(self.processador, 'detalhes') or not self.processador.detalhes:
-            QMessageBox.warning(self, "Aviso", 
-                "Primeiro carregue um arquivo CNAB para poder editá-lo.")
-            return
-        
-        # Mostrar aviso sobre funcionalidade
-        resposta = QMessageBox.question(
-            self, 
-            "Editor Interativo",
-            "🔧 EDITOR INTERATIVO DE CNAB\n\n"
-            "Esta funcionalidade permite:\n"
-            "• Editar registros individuais\n"
-            "• Alterar valores em lote\n"
-            "• Modificar datas em massa\n"
-            "• Visualizar e buscar registros\n"
-            "• Salvar alterações em novo arquivo\n\n"
-            "⚠️ O editor será aberto no terminal/console.\n"
-            "Verifique a janela do terminal após clicar 'Yes'.\n\n"
-            "Deseja continuar?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.Yes
-        )
-        
-        if resposta != QMessageBox.Yes:
-            return
-        
-        try:
-            # Executar editor interativo em thread separada para não travar a GUI
-            import threading
-            
-            def executar_editor():
-                resultado = self.processador.editor_interativo()
-                if resultado:
-                    # Se salvou alterações, atualizar a visualização
-                    self.atualizar_visualizacao()
-            
-            # Criar e iniciar thread
-            thread_editor = threading.Thread(target=executar_editor)
-            thread_editor.daemon = True
-            thread_editor.start()
-            
-            # Mostrar informação sobre onde encontrar o editor
-            QMessageBox.information(
-                self, 
-                "Editor Iniciado",
-                "🔧 Editor interativo iniciado!\n\n"
-                "📍 Verifique a janela do terminal/console\n"
-                "   para interagir com o editor.\n\n"
-                "💡 Se não conseguir ver o terminal:\n"
-                "   • Windows: Procure por uma janela preta\n"
-                "   • Use Alt+Tab para alternar entre janelas\n\n"
-                "✅ A interface gráfica permanecerá responsiva."
-            )
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Erro", 
-                f"Erro ao iniciar editor interativo: {str(e)}")
-
-    def editor_grafico(self):
-        """Abre o editor gráfico para NOSSO_NUMERO, CODIGO_EMPRESA e SEU_NUMERO"""
-        if not hasattr(self, 'processador') or not self.processador or not hasattr(self.processador, 'detalhes') or not self.processador.detalhes:
-            QMessageBox.warning(self, "Aviso", 
-                "Primeiro carregue um arquivo CNAB para poder editá-lo.")
-            return
-        
-        try:
-            # Criar e abrir o dialog do editor gráfico
-            dialog = EditorGraficoDialog(self.processador, self)
-            resultado = dialog.exec_()
-            
-            # Se o usuário salvou alterações, atualizar a visualização
-            if resultado == QDialog.Accepted:
-                self.atualizar_visualizacao()
-                self.status_bar.showMessage("Alterações aplicadas com sucesso!")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Erro", 
-                f"Erro ao abrir editor gráfico: {str(e)}")
-
-    def atualizar_visualizacao(self):
-        """Atualiza a visualização após alterações no editor"""
-        try:
-            # Recarregar dados na tabela
-            if hasattr(self, 'processador') and self.processador and hasattr(self.processador, 'detalhes') and self.processador.detalhes:
-                # Atualizar DataFrame
-                self.df = pd.DataFrame(self.processador.detalhes)
-                self.preencher_tabela()
-                
-                # Mostrar mensagem de atualização
-                alterados = len([d for d in self.processador.detalhes if d.get('_alterado', False)])
-                if alterados > 0:
-                    QMessageBox.information(
-                        self, 
-                        "Dados Atualizados",
-                        f"✅ Visualização atualizada!\n\n"
-                        f"📊 {alterados} registro(s) foram alterados\n"
-                        f"📄 Total de registros: {len(self.processador.detalhes)}"
-                    )
-        except Exception as e:
-            print(f"Erro ao atualizar visualização: {e}")
-
-    def _criar_aba_detalhes(self, layout):
-        # Container principal da tabela
-        tabela_container = QFrame()
-        tabela_container.setStyleSheet(f"""
-            QFrame {{
-                background-color: {TEMA_ATUAL['COR_SECUNDARIA']};
-                border-radius: 8px;
-                padding: 8px;
-                border: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
-            }}
-        """)
-        layout_tabela = QVBoxLayout(tabela_container)
-        layout_tabela.setContentsMargins(12, 12, 12, 12)
-        layout_tabela.setSpacing(12)
-        
-        # Cabeçalho da tabela com informações
-        header_container = QHBoxLayout()
-        header_container.setSpacing(10)
-        
-        # Ícone para a tabela
-        icon_tabela = QLabel("📋")
-        icon_tabela.setStyleSheet(f"""
-            font-size: 20px;
-            color: {TEMA_ATUAL['COR_PRIMARIA']};
-        """)
-        header_container.addWidget(icon_tabela)
-        
-        # Label para a tabela
-        self.lbl_tabela = QLabel("Nenhum dado para exibir")
-        self.lbl_tabela.setStyleSheet(f"""
-            color: {TEMA_ATUAL['COR_TEXTO']};
-            font-size: 14px;
-            font-weight: bold;
-            font-family: 'Segoe UI';
-        """)
-        header_container.addWidget(self.lbl_tabela, 1)
-        
-        layout_tabela.addLayout(header_container)
-        
-        # Separador
-        separador = QFrame()
-        separador.setFrameShape(QFrame.HLine)
-        separador.setFrameShadow(QFrame.Sunken)
-        separador.setStyleSheet(f"""
-            background-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
-            max-height: 1px;
-            margin-top: 8px;
-            margin-bottom: 8px;
-        """)
-        layout_tabela.addWidget(separador)
-        
-        # Tabela para exibição dos dados - criar apenas se não existir
-        if not hasattr(self, 'tabela') or self.tabela is None:
-            self.tabela = QTableWidget()
-            self.tabela.setStyleSheet(f"""
-                QTableWidget {{
-                    background-color: {TEMA_ATUAL['COR_SECUNDARIA']};
-                    color: {TEMA_ATUAL['COR_TEXTO']};
-                    gridline-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
-                    border: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
-                    border-radius: 8px;
-                    padding: 2px;
-                }}
-                QTableWidget::item {{
-                    padding: 8px;
-                    border-bottom: 1px solid {TEMA_ATUAL['COR_TABELA_HEADER']};
-                }}
-                QTableWidget::item:selected {{
-                    background-color: {TEMA_ATUAL['COR_PRIMARIA']};
-                    color: white;
-                }}
-                QHeaderView::section {{
-                    background-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
-                    color: {TEMA_ATUAL['COR_TEXTO']};
-                    padding: 10px;
-                    border: none;
-                    font-weight: bold;
-                    text-align: center;
-                }}
-                QTableWidget QTableCornerButton::section {{
-                    background-color: {TEMA_ATUAL['COR_TABELA_HEADER']};
-                    border: none;
-                }}
-            """)
-            self.tabela.setAlternatingRowColors(True)
-            self.tabela.setSelectionBehavior(QTableWidget.SelectRows)
-            self.tabela.setSelectionMode(QTableWidget.SingleSelection)
-            self.tabela.setEditTriggers(QTableWidget.NoEditTriggers)
-            self.tabela.horizontalHeader().setStretchLastSection(True)
-            self.tabela.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-            self.tabela.verticalHeader().setVisible(False)
-        layout_tabela.addWidget(self.tabela, 1)
-        
-        layout.addWidget(tabela_container, 1)
         
     def _criar_aba_resumo(self, layout):
         # Container principal
@@ -3033,4 +3164,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

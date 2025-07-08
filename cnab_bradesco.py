@@ -98,6 +98,7 @@ class CNABBradesco:
             'numero_inscricao': linha[3:17] if len(linha) >= 17 else "",
             'codigo_empresa': linha[20:37] if len(linha) >= 37 else "",
             'nosso_numero': linha[70:82] if len(linha) >= 82 else "",
+            'nosso_numero_2': linha[134:146] if len(linha) >= 146 else "",  # Segundo campo nosso número
             'carteira': linha[107:109] if len(linha) >= 109 else "",
             'data_ocorrencia': self._formatar_data(data_ocorrencia) if data_ocorrencia.strip() else "",
             'seu_numero': linha[116:126] if len(linha) >= 126 else "",
@@ -1223,6 +1224,10 @@ class CNABBradesco:
         nosso_numero = str(detalhe.get('nosso_numero', '')).strip().zfill(12)[:12]
         linha = linha[:70] + nosso_numero + linha[82:]
         
+        # Nosso número 2
+        nosso_numero_2 = str(detalhe.get('nosso_numero_2', '')).strip().zfill(12)[:12]
+        linha = linha[:134] + nosso_numero_2 + linha[146:]
+        
         # Carteira
         carteira = str(detalhe.get('carteira', '09')).strip()[:2].zfill(2)
         linha = linha[:107] + carteira + linha[109:]
@@ -1406,6 +1411,14 @@ class CNABBradesco:
                 novo_nosso_numero = novo_nosso_numero.zfill(12)[:12]
                 linha_editada = linha_editada[:70] + novo_nosso_numero + linha_editada[82:]
         
+        # Editar NOSSO_NUMERO_2 (posições 37-49, 12 caracteres)
+        if 'nosso_numero_2' in detalhe and detalhe.get('_alterado', False):
+            novo_nosso_numero_2 = str(detalhe['nosso_numero_2']).strip()
+            if novo_nosso_numero_2:
+                # Ajustar para 12 caracteres (preencher com zeros à esquerda ou truncar)
+                novo_nosso_numero_2 = novo_nosso_numero_2.zfill(12)[:12]
+                linha_editada = linha_editada[:134] + novo_nosso_numero_2 + linha_editada[146:]
+        
         # Editar CODIGO_EMPRESA (posições 20-37, 17 caracteres)
         if 'codigo_empresa' in detalhe and detalhe.get('_alterado', False):
             novo_codigo_empresa = str(detalhe['codigo_empresa']).strip()
@@ -1473,6 +1486,10 @@ class CNABBradesco:
         # Nosso número
         nosso_numero = str(detalhe.get('nosso_numero', '')).strip().zfill(12)[:12]
         linha = linha[:70] + nosso_numero + linha[82:]
+        
+        # Nosso número 2
+        nosso_numero_2 = str(detalhe.get('nosso_numero_2', '')).strip().zfill(12)[:12]
+        linha = linha[:134] + nosso_numero_2 + linha[146:]
         
         # Carteira
         carteira = str(detalhe.get('carteira', '09')).strip()[:2].zfill(2)
